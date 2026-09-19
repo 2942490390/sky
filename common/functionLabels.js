@@ -1,0 +1,24 @@
+// common/functionLabels.js
+// 功能 key 的显示名映射
+// 改 label 只改这里，DEFAULT_OFFSETS 的 key 不变
+
+export const FUNCTION_LABELS = {
+    energy:    '无限能量',
+    sudu:      '全局加速',
+    nengliang: '能量值',
+    daoju:     '无限道具',
+    lengqu:    '冷却时间',
+    gysl:      '光翼数量',
+    zy:        '炸翼数量',
+    lzaddr:    '蜡烛地址',
+    zhuahua:   '炸花地址',
+    wxyh:      '无限烟花',
+    yclz:      '隐藏蜡烛'
+}
+
+/**
+ * 根据 key 拿显示名，没配置的返回 key 本身
+ */
+export function getLabel(key) {
+    return FUNCTION_LABELS[key] || key
+}
