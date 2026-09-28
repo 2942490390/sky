@@ -17,10 +17,9 @@
 				</view>
 				<view class="row">
 					<label>搜索范围模块：</label>
-					<picker id="moduleSelect" :range="moduleOptions" range-key="label" :value="moduleIndex"
-						@change="onModuleChange">
-						<view class="picker-view">{{ moduleOptions[moduleIndex]?.label || '全部模块（不限定范围）' }}</view>
-					</picker>
+					<select id="moduleSelect" class="native-select" :value="moduleIndex" @change="onModuleChange">
+						<option v-for="(opt, i) in moduleOptions" :key="i" :value="i">{{ opt.label }}</option>
+					</select>
 				</view>
 			</view>
 
@@ -40,23 +39,13 @@
 
 		<!-- ========== 底部虚拟滚动日志 ========== -->
 		<view class="panel log-panel">
-			<scroll-view
-				class="log-scroll"
-				scroll-y
-				:scroll-top="scrollTopPx"
-				:scroll-with-animation="false"
-				@scroll="onScroll"
-				:style="{ height: '100%' }"
-			>
+			<scroll-view class="log-scroll" scroll-y :scroll-top="scrollTopPx" :scroll-with-animation="false"
+				@scroll="onScroll" :style="{ height: '100%' }">
 				<!-- 占位撑开总高度 -->
 				<view class="log-spacer" :style="{ height: totalHeight + 'px' }">
 					<!-- 只渲染可视区的行 -->
-					<view
-						class="log-line"
-						v-for="item in visibleItems"
-						:key="item.index"
-						:style="{ top: (item.index * LINE_HEIGHT) + 'px' }"
-					>
+					<view class="log-line" v-for="item in visibleItems" :key="item.index"
+						:style="{ top: (item.index * LINE_HEIGHT) + 'px' }">
 						{{ item.text }}
 					</view>
 				</view>
@@ -70,7 +59,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 
 // ============ 响应式 UI 状态 ============
 const dataAddr = ref('')
-const maxOffset = ref('0x7000')
+const maxOffset = ref('0x8000')
 const maxLevel = ref('4')
 const moduleIndex = ref(0)
 const moduleOptions = ref([{ label: '全部模块（不限定范围）', value: '__ALL__' }])
@@ -311,7 +300,7 @@ async function runOneCandidate() {
 	h5gg.clearResults()
 	try {
 		h5gg.searchNumber(valStart + '~' + valEnd, 'U64', '0x0', '0x300000000')
-	} catch (e) {}
+	} catch (e) { }
 	st.count = h5gg.getResultsCount()
 	showTip('第' + (st.level + 1) + '层 ' + (st.idx + 1) + '/' + st.levelResults.length + ' => ' + st.count + '个')
 	st.skip = 0
@@ -441,7 +430,11 @@ function onTogglePanel() {
 }
 
 function onModuleChange(e) {
-	moduleIndex.value = e.detail.value
+	// 原生 <select> 的 e.target.value 是字符串，要转数字
+	const val = e.target && e.target.value !== undefined
+		? e.target.value
+		: e.detail && e.detail.value
+	moduleIndex.value = parseInt(val, 10) || 0
 }
 
 // ============ 生命周期 ============
@@ -452,7 +445,7 @@ onMounted(() => {
 		uni.showToast({ title: 'h5gg 未定义', icon: 'none' })
 		return
 	}
-	try { h5gg.require(7.8) } catch (e) {}
+	try { h5gg.require(7.8) } catch (e) { }
 
 	nextTick(() => {
 		try { populateModuleSelect() } catch (e) { console.error(e) }
@@ -477,7 +470,7 @@ onMounted(() => {
 				})
 				resizeObserver.observe(el)
 			}
-		} catch (e) {}
+		} catch (e) { }
 	}
 })
 
@@ -520,9 +513,15 @@ onUnmounted(() => {
 	align-items: center;
 	margin-bottom: 4px;
 }
-.row:last-child { margin-bottom: 0; }
 
-label { color: #333; font-size: 12px; }
+.row:last-child {
+	margin-bottom: 4px;
+}
+
+label {
+	color: #333;
+	font-size: 12px;
+}
 
 input {
 	flex: 1;
@@ -535,25 +534,43 @@ input {
 	color: #333;
 	padding-left: 4px;
 }
-input:focus { border-color: #007aff; }
 
-picker { flex: 1; min-width: 140px; }
-.picker-view {
-	padding: 4px;
+input:focus {
+	border-color: #007aff;
+}
+
+select.native-select {
+	flex: 1;
+	min-width: 140px;
+	padding: 4px 6px;
 	border: 1px solid #ddd;
 	border-radius: 4px;
 	font-size: 12px;
 	background: #fff;
 	color: #333;
-	min-height: 26px;
+	height: 26px;
+	box-sizing: border-box;
+	outline: none;
+	/* 去掉 iOS 默认圆角 */
+	-webkit-appearance: none;
+	appearance: none;
+	/* 自绘下拉箭头 */
+	background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 6px center;
+	padding-right: 22px;
+}
+
+select.native-select:focus {
+	border-color: #007aff;
 }
 
 .btn-bar {
 	display: flex;
 	gap: 6px;
 	flex-wrap: wrap;
-	margin-top: 4px;
 }
+
 button {
 	padding: 6px;
 	border: none;
@@ -564,13 +581,40 @@ button {
 	line-height: 1.2;
 	margin: 0;
 }
-button::after { border: none; }
-#start { background: #007aff; color: #fff; }
-#pause { background: #ff9500; color: #fff; }
-#stop { background: #ff3b30; color: #fff; }
-#clear { background: #8e8e93; color: #fff; }
-#togglePanel { background: #34c759; color: #fff; }
-button[disabled] { opacity: 0.5; pointer-events: none; }
+
+button::after {
+	border: none;
+}
+
+#start {
+	background: #007aff;
+	color: #fff;
+}
+
+#pause {
+	background: #ff9500;
+	color: #fff;
+}
+
+#stop {
+	background: #ff3b30;
+	color: #fff;
+}
+
+#clear {
+	background: #8e8e93;
+	color: #fff;
+}
+
+#togglePanel {
+	background: #34c759;
+	color: #fff;
+}
+
+button[disabled] {
+	opacity: 0.5;
+	pointer-events: none;
+}
 
 #logTip {
 	color: #333;
@@ -580,7 +624,11 @@ button[disabled] { opacity: 0.5; pointer-events: none; }
 	display: flex;
 	justify-content: space-between;
 }
-#logTip .count { color: #007aff; font-weight: bold; }
+
+#logTip .count {
+	color: #007aff;
+	font-weight: bold;
+}
 
 /* ========== 虚拟滚动日志区 ========== */
 .log-scroll {

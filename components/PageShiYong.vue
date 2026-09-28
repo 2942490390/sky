@@ -1,19 +1,25 @@
 <template>
 	<view class="page">
+
+		<!-- 人物坐标 -->
 		<view class="sky-task">
 			<view class="task-left">
-				<text class="fa-solid fa-memory"></text>
-				<text>内存吸火</text>
+				<text class="fa-solid fa-ruler"></text>
+				<text>人物坐标</text>
 			</view>
-			<button class="sky-btn" @click="xihuo()">执行</button>
+			<button class="sky-btn" @tap="editAxis('x')">X：{{ coord.x.toFixed(3) }}</button>
+			<button class="sky-btn axis" @tap="editAxis('z')">Z：{{ coord.z.toFixed(3) }}</button>
+			<button class="sky-btn axis" @tap="editAxis('y')">Y：{{ coord.y.toFixed(3) }}</button>
 		</view>
 
+		<!-- 自动跑图 -->
 		<view class="sky-task">
 			<view class="task-left">
-				<text class="fa-solid fa-arrow-rotate-left"></text>
-				<text>回到遇境</text>
+				<text class="fa-solid fa-route"></text>
+				<text>自动跑图</text>
 			</view>
-			<button class="sky-btn" @click="warp('CandleSpace')">执行</button>
+			<button class="sky-btn" @tap="toggleAutoRun">{{ autoRunLabel }}</button>
+			<button class="sky-btn stop" @tap="stopAutoRun">停止跑图</button>
 		</view>
 
 		<!-- 无限能量 -->
@@ -24,21 +30,6 @@
 			</view>
 			<switch :checked="swState.wxnl" color="#FFD966" style="transform: scale(0.75);" @change="wxnl" />
 		</view>
-
-		<!-- 全局加速（改为滑动条） -->
-		<view class="sky-task sky-task-block">
-			<view class="task-left">
-				<text class="fa-solid fa-gauge-high"></text>
-				<text>全局加速</text>
-			</view>
-			<view class="slider-wrap">
-				<slider class="speed-slider" :value="speedValue" @changing="onSpeedChanging" @change="onSpeedChange"
-					min="1" max="10" step="0.1" activeColor="#FFD966" backgroundColor="rgba(0,0,0,0.15)"
-					block-color="#FFF9E8" block-size="18" />
-				<text class="speed-label">{{ speedValue.toFixed(1) }}x</text>
-			</view>
-		</view>
-
 
 		<!-- 自燃全开 -->
 		<view class="sky-task">
@@ -58,7 +49,6 @@
 			<switch :checked="swState.bloom" color="#FFD966" style="transform: scale(0.75);" @change="onBloomChange" />
 		</view>
 
-
 		<!-- 隐藏蜡烛 -->
 		<view class="sky-task">
 			<view class="task-left">
@@ -68,12 +58,18 @@
 			<switch :checked="swState.yclz" color="#FFD966" style="transform: scale(0.75);" @change="yclz" />
 		</view>
 
-		<view class="sky-task">
+		<!-- 全局加速 -->
+		<view class="sky-task sky-task-block">
 			<view class="task-left">
-				<text class="fa-solid fa-ruler"></text>
-				<text>我的身高</text>
+				<text class="fa-solid fa-gauge-high"></text>
+				<text>全局加速</text>
 			</view>
-			<button class="sky-btn" @click="wdsg()">查询</button>
+			<view class="slider-wrap">
+				<slider class="speed-slider" :value="speedValue" @changing="onSpeedChanging" @change="onSpeedChange"
+					min="1" max="10" step="0.1" activeColor="#FFD966" backgroundColor="rgba(0,0,0,0.15)"
+					block-color="#FFF9E8" block-size="18" />
+				<text class="speed-label">{{ speedValue.toFixed(1) }}x</text>
+			</view>
 		</view>
 	</view>
 </template>
@@ -82,13 +78,13 @@
 	import {
 		reactive,
 		ref,
+		onMounted,
 		onUnmounted
 	} from 'vue'
 	import {
 		energyLoop,
 		stopEnergyLoop,
 		speedLoop,
-		setSpeed,
 		stopSpeedLoop,
 		burnLoop,
 		bloomLoop,
@@ -97,48 +93,38 @@
 		setCandleVisibility,
 		clearCandleAddr
 	} from '../common/h5gg.js'
+	import {
+		readCoordOnce,
+		startCoordLoop,
+		stopCoordLoop,
+		setCoordAxis,
+		startAutoRun,
+		stopAutoRun as stopAutoRunFn,
+		resetAutoRunIndex,
+		isAutoRunRunning,
+		getAutoRunPointsCount
+	} from '../common/coordRunner.js'
 
 	// ===== 开关状态 =====
 	const swState = reactive({
-		wxnl: false, // 无限能量
-		burn: false, // ★ 补：自燃全开
-		bloom: false, // ★ 补：自动炸花
-		fzjb: false, // ★ 补：防止举报
-		yclz: false // 隐藏蜡烛
+		wxnl: false,
+		burn: false,
+		bloom: false,
+		yclz: false
 	})
 
+	// ===== 坐标 =====
+	const coord = reactive({
+		x: 0,
+		z: 0,
+		y: 0
+	})
 
-	// ===== 非响应式运行时状态 =====
-	let nl = null
-	let qj = false
-	let zrzhId = null
+	// ===== 自动跑图 UI 状态 =====
+	const autoRunLabel = ref('开始跑图')
+	const autoRunInterval = 3.8
 
-	// ===== 原样保留的方法 =====
-
-	function xihuo() {
-		h5gg.clearResults();
-		h5gg.searchNumber('3.5', 'F32', '0x110000000', '0x2000000000');
-		h5gg.searchNearby('-1', 'F32', '0x60');
-		h5gg.searchNumber('3.5', 'F32', '0x00000000', '0x2000000000');
-		h5gg.editAll('1000000000', 'F32');
-		alert("已吸取火蜡");
-	}
-
-	function warp(id) {
-		if (typeof window !== 'undefined' && typeof window.warp === 'function') {
-			window.warp(id);
-		} else {
-			console.log('warp:', id);
-		}
-	}
-	// 无限能量
-	function wxnl(e) {
-		const checked = e.detail.value
-		swState.wxnl = checked
-		energyLoop(checked)
-	}
-
-	// 全局加速滑动条（保持不变）
+	// ===== 全局加速 =====
 	const speedValue = ref(1.0)
 
 	function onSpeedChanging(e) {
@@ -152,44 +138,120 @@
 		else speedLoop(false)
 	}
 
-	// ★ 自燃全开
+	// ===== 无限能量 =====
+	function wxnl(e) {
+		const checked = e.detail.value
+		swState.wxnl = checked
+		energyLoop(checked)
+	}
+
+	// ===== 自燃全开 =====
 	function onBurnChange(e) {
 		const checked = e.detail.value
 		swState.burn = checked
-		console.log('自燃全开:', checked)
 		burnLoop(checked)
 	}
 
-	// ★ 自动炸花
+	// ===== 自动炸花 =====
 	function onBloomChange(e) {
 		const checked = e.detail.value
 		swState.bloom = checked
-		console.log('自动炸花:', checked)
 		bloomLoop(checked)
 	}
 
-
-	// 隐藏蜡烛
+	// ===== 隐藏蜡烛 =====
 	async function yclz(e) {
 		try {
 			const checked = e.detail.value
 			swState.yclz = checked
-			console.log('隐藏蜡烛:', checked)
-			// checked = true 表示"隐藏"，visible = !checked
 			await setCandleVisibility(!checked)
 		} catch (err) {
 			console.error('[yclz] 出错:', err)
-			// 报错时把开关重置
 			swState.yclz = false
 		}
 	}
 
-	function wdsg() {
-		console.log('wdsg')
+	// ===== 点击 X / Y / Z 编辑 =====
+	async function editAxis(axis) {
+		const current = coord[axis]
+		const input = prompt(
+			`修改 ${axis.toUpperCase()} 坐标（当前 ${current.toFixed(3)}）：`,
+			String(current)
+		)
+		if (input === null) return
+		const v = parseFloat(input)
+		if (!Number.isFinite(v)) {
+			uni.showToast({
+				icon: 'none',
+				title: '请输入有效数字'
+			})
+			return
+		}
+		const ok = await setCoordAxis(axis, v)
+		uni.showToast({
+			icon: ok ? 'success' : 'none',
+			title: ok ? `${axis.toUpperCase()} 修改成功` : '修改失败'
+		})
 	}
 
-	// ★ 页面卸载时清理所有循环，避免内存泄漏
+	// ===== 自动跑图 =====
+	async function toggleAutoRun() {
+		if (isAutoRunRunning()) {
+			// 暂停
+			stopAutoRunFn()
+			autoRunLabel.value = '继续跑图'
+			return
+		}
+
+		// 询问间隔
+		const input = prompt(
+			'输入间隔秒数\n太快拉回建议 3.8 秒\n晨岛开始',
+			String(autoRunInterval)
+		)
+		if (input === null) return
+		const t = parseFloat(input)
+		const interval = (!isNaN(t) && t > 0) ? t : 3.8
+
+		autoRunLabel.value = '暂停跑图'
+		await startAutoRun({
+			intervalSec: interval,
+			reset: false,
+			onStep: (idx, total) => {
+				console.log(`[自动跑图] ${idx + 1}/${total}`)
+			},
+			onFinish: () => {
+				autoRunLabel.value = '开始跑图'
+				uni.showToast({
+					icon: 'none',
+					title: '跑图完成'
+				})
+			}
+		})
+	}
+
+	function stopAutoRun() {
+		stopAutoRunFn()
+		resetAutoRunIndex()
+		autoRunLabel.value = '开始跑图'
+		uni.showToast({
+			icon: 'none',
+			title: '已停止'
+		})
+	}
+
+	// ===== 生命周期 =====
+	onMounted(() => {
+		// 轮询坐标（500ms）
+		startCoordLoop((c) => {
+			coord.x = c.x
+			coord.z = c.z
+			coord.y = c.y
+		}, 500)
+	})
+
 	onUnmounted(() => {
+		stopCoordLoop()
+		stopAutoRunFn()
 		stopEnergyLoop()
 		stopSpeedLoop()
 		stopBurnLoop()
@@ -199,30 +261,25 @@
 </script>
 
 <style scoped>
-	/* 公共样式在 App.vue 全局，这里只保留滑动条专属样式 */
-
-	/* 滑动条所在行改成上下布局，防止挤压 */
 	.sky-task-block {
-		flex-direction: column;
-		align-items: stretch;
-		gap: 6px;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		min-height: 42px;
 	}
 
-	/* 滑块容器：横向排列「滑块 + 数值」 */
 	.slider-wrap {
 		display: flex;
 		align-items: center;
-		gap: 10px;
 		width: 100%;
+		flex: 3;
 	}
 
-	/* 滑块本体，自适应剩余宽度 */
 	.speed-slider {
 		flex: 1;
 		margin: 0;
 	}
 
-	/* 数值显示 */
 	.speed-label {
 		min-width: 48px;
 		text-align: right;

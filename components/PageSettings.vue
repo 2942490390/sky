@@ -7,6 +7,7 @@
 				<button class="mini-btn add" @click="addRow">+ 新增</button>
 				<button class="mini-btn reset" @click="onReset">恢复默认</button>
 				<button class="mini-btn copy" @click="onCopy">复制JS</button>
+				<button class="mini-btn import" @click="openImport">导入指针链</button>
 			</view>
 		</view>
 
@@ -14,35 +15,38 @@
 		<scroll-view class="list" scroll-y :scroll-top="scrollTop" :scroll-with-animation="true" @scroll="onScroll"
 			:style="{ height: listHeight + 'px' }">
 			<view ref="listContentRef" class="list-content">
-				<view v-for="(item, idx) in list" :key="idx" class="card">
+				<view v-for="(item, idx) in list" :key="idx" class="card"
+					:class="{ 'card-active': idx === highlightIndex }">
 					<!-- 第一行：功能 key 选择 + 删除 -->
 					<view class="card-header">
-						<picker :range="functionKeys" range-key="label" :value="getKeyIndex(item.key)"
-							@change="e => onKeyChange(idx, e)">
-							<view class="key-picker">
-								<text class="key-label">{{ getKeyLabel(item.key) }}</text>
-								<text class="key-code">({{ item.key || '未选择' }})</text>
-							</view>
-						</picker>
+						<select class="key-select" :value="getKeyIndex(item.key)" @change="e => onKeyChange(idx, e)">
+							<option v-for="(fk, i) in functionKeys" :key="fk.key" :value="i">{{ fk.label }} ({{ fk.key
+							}})</option>
+						</select>
 						<button class="mini-btn del" @click="removeRow(idx)">删除</button>
+						<button class="mini-btn paste" @click="paste(idx)">粘贴</button>
 					</view>
 
 					<!-- 第二行：基址偏移 -->
 					<view class="row">
 						<text class="row-label">基址偏移</text>
-						<input class="row-input" v-model="item.base" placeholder="0x54A3B48" />
+						<input class="row-input" v-model="item.base" placeholder="0x54A3B48"
+							@focus="onInputFocus(idx)" />
 					</view>
 
 					<!-- 第三行：多级偏移链 -->
 					<view class="chain-block">
 						<view class="chain-header">
-							<text class="row-label">偏移链</text>
-							<button class="mini-btn add-chain" @click="addChain(idx)">+ 加一级</button>
+							<text class="row-label">偏移链 ({{ item.chain.length }}/{{ MAX_CHAIN }})</text>
+							<button class="mini-btn add-chain"
+								:class="{ 'is-disabled': item.chain.length >= MAX_CHAIN }"
+								:disabled="item.chain.length >= MAX_CHAIN" @click="addChain(idx)">+ 加一级</button>
 						</view>
 						<view class="chain-list">
 							<view v-for="(c, ci) in item.chain" :key="ci" class="chain-item">
 								<text class="chain-idx">[{{ ci }}]</text>
-								<input class="chain-input" v-model="item.chain[ci]" placeholder="0xC48" />
+								<input class="chain-input" v-model="item.chain[ci]" placeholder="0xC48"
+									@focus="onInputFocus(idx)" />
 								<button v-if="item.chain.length > 1" class="mini-btn del-chain"
 									@click="removeChain(idx, ci)">×</button>
 							</view>
@@ -66,6 +70,24 @@
 		<!-- 底部保存按钮 -->
 		<view class="footer">
 			<button class="save-btn" @click="onSave">保存配置</button>
+		</view>
+
+		<!-- ========== 弹窗：选择要设定的功能 ========== -->
+		<view v-if="showFuncPicker" class="modal-mask" @click.self="closeFuncPicker">
+			<view class="modal-box">
+				<view class="modal-title">选择要设定的功能</view>
+				<scroll-view class="modal-list" scroll-y>
+					<view v-for="fk in functionKeys" :key="fk.key" class="modal-item"
+						:class="{ active: importTargetKey === fk.key }" @click="importTargetKey = fk.key">
+						<text>{{ fk.label }}</text>
+						<text class="modal-item-code">({{ fk.key }})</text>
+					</view>
+				</scroll-view>
+				<view class="modal-footer">
+					<button class="mini-btn reset" @click="closeFuncPicker">取消</button>
+					<button class="mini-btn add" :disabled="!importTargetKey" @click="onFuncPicked">确定</button>
+				</view>
+			</view>
 		</view>
 	</view>
 </template>
@@ -91,40 +113,45 @@
 		clearOffsets,
 		clearAllAddrCache
 	} from '@/common/h5gg.js'
+	import {
+		parseText,
+		toChainPair,
+		filterStableChains,
+		checkHeader
+	} from '@/common/pointerImporter.js'
+	import {
+		readFileStream,
+		extractFile
+	} from '@/common/fileStreamReader.js'
 
 	const listHeight = ref(300)
 	const scrollTop = ref(0)
 	const listContentRef = ref(null)
+	const highlightIndex = ref(-1)
 
-	// 用户当前滚动位置（不从 scrollTop.value 读，避免和受控值冲突）
 	let currentScrollTop = 0
-
-	// 是否处于"自动滚动到顶/底"的过程中（防止 onScroll 覆盖）
 	let isAutoScrolling = false
-
-	// 内容高度（MutationObserver 实时更新）
 	let contentHeight = 0
-
-	// 可视区高度（scroll-view 自身高度）
 	let viewportHeight = 0
-
-	// MutationObserver 实例
 	let observer = null
+	let focusScrollTimer = null
+	let scrollFinalizeTimer = null
+	let scrollRequestId = 0
+
+	// ===== 导入相关状态（只保留选功能） =====
+	const showFuncPicker = ref(false)
+	const importTargetKey = ref('')
 
 	// ===== 监听用户滚动 =====
 	function onScroll(e) {
 		currentScrollTop = e.detail.scrollTop
-		// 如果不在自动滚动状态，把 scrollTop 同步成实际值
-		// 这样下次设 scrollTop 时，值一定会变化
 		if (!isAutoScrolling) {
-			// 用 setTimeout 0，避免在滚动事件里直接改导致抖动
 			if (scrollTop.value !== currentScrollTop) {
 				scrollTop.value = currentScrollTop
 			}
 		}
 	}
 
-	// ===== 测量内容高度 =====
 	function measureContent() {
 		if (!listContentRef.value) return
 		const el = listContentRef.value.$el || listContentRef.value
@@ -134,85 +161,170 @@
 		}
 	}
 
-	// ===== 测量可视区高度 =====
 	function measureViewport() {
-		const query = uni.createSelectorQuery()
-		query.select('.list').boundingClientRect(rect => {
-			if (rect && rect.height) {
-				viewportHeight = Math.ceil(rect.height)
-			}
-		}).exec()
+		return new Promise(resolve => {
+			const query = uni.createSelectorQuery()
+			query.select('.list').boundingClientRect(rect => {
+				if (rect && rect.height) {
+					viewportHeight = Math.ceil(rect.height)
+				}
+				resolve(viewportHeight)
+			}).exec()
+		})
 	}
 
-	// ===== 滚动到底部 =====
 	async function scrollToBottom() {
+		const requestId = ++scrollRequestId
 		await nextTick()
-		// 等 DOM 真正渲染完，再测量
-		await new Promise(resolve => setTimeout(resolve, 30))
+		await new Promise(resolve => setTimeout(resolve, 40))
 
 		measureContent()
-		measureViewport()
+		const measuredViewport = await measureViewport()
+		if (requestId !== scrollRequestId) return
 
-		if (contentHeight <= viewportHeight) {
-			// 内容没超过可视区，不需要滚动
+		const visibleHeight = measuredViewport || viewportHeight || listHeight.value
+		const maxScrollTop = Math.max(0, contentHeight - visibleHeight)
+		if (Math.abs(currentScrollTop - maxScrollTop) < 2) {
+			isAutoScrolling = false
 			return
 		}
 
-		const maxScrollTop = contentHeight - viewportHeight
-		if (maxScrollTop <= 0) return
-
-		// 如果已经在底部附近，不重复触发
-		if (Math.abs(currentScrollTop - maxScrollTop) < 2) return
-
 		isAutoScrolling = true
+		scrollTop.value = maxScrollTop
 
-		// 先设 0（如果当前不是 0），再设目标值，确保值变化
-		if (scrollTop.value !== 0 && currentScrollTop === 0) {
-			// 特殊情况：当前就在 0，直接设目标
-			scrollTop.value = maxScrollTop
-		} else {
-			// 先重置到当前实际位置，再设目标
-			scrollTop.value = currentScrollTop
-			await nextTick()
-			scrollTop.value = maxScrollTop
-		}
-
-		// 自动滚动动画结束后，解除标记
-		setTimeout(() => {
+		if (scrollFinalizeTimer) clearTimeout(scrollFinalizeTimer)
+		scrollFinalizeTimer = setTimeout(() => {
+			if (requestId !== scrollRequestId) return
 			isAutoScrolling = false
-			// 同步一次实际值，为下次做准备
 			currentScrollTop = maxScrollTop
 			scrollTop.value = maxScrollTop
-		}, 350) // 300ms 动画 + 50ms 缓冲
+		}, 350)
 	}
 
-	// ===== 初始化 MutationObserver =====
+	async function scrollToIndex(idx) {
+		await nextTick()
+		await new Promise(resolve => setTimeout(resolve, 30))
+
+		const query = uni.createSelectorQuery()
+		const res = await new Promise(resolve => {
+			query.select('.list-content').boundingClientRect()
+			query.selectAll('.card').boundingClientRect()
+			query.exec(resolve)
+		})
+
+		const contentRect = res[0]
+		const cardRects = res[1]
+		if (!contentRect || !cardRects || !cardRects[idx]) return
+
+		const offsetInContent = cardRects[idx].top - contentRect.top
+		const PADDING_TOP = 8
+		let target = offsetInContent - PADDING_TOP
+
+		measureContent()
+		const visibleHeight = await measureViewport()
+		const maxScroll = Math.max(0, contentHeight - (visibleHeight || listHeight.value))
+		target = Math.max(0, Math.min(target, maxScroll))
+
+		isAutoScrolling = true
+		safeSetScrollTop(target)
+
+		if (scrollFinalizeTimer) clearTimeout(scrollFinalizeTimer)
+		scrollFinalizeTimer = setTimeout(() => {
+			isAutoScrolling = false
+			currentScrollTop = target
+			safeSetScrollTop(target)
+		}, 350)
+	}
+
+	function safeSetScrollTop(v) {
+		if (!Number.isFinite(v)) return
+		if (scrollTop.value === v) return
+		try {
+			scrollTop.value = v
+		} catch (e) {
+			// scroll-view 内部 main.value 未就绪，忽略
+		}
+	}
+
+	function onInputFocus(idx) {
+		const savedScrollTop = currentScrollTop
+
+		if (focusScrollTimer) {
+			clearTimeout(focusScrollTimer)
+			focusScrollTimer = null
+		}
+		if (scrollFinalizeTimer) {
+			clearTimeout(scrollFinalizeTimer)
+			scrollFinalizeTimer = null
+		}
+
+		const restore = () => {
+			isAutoScrolling = true
+			scrollTop.value = savedScrollTop
+			setTimeout(() => {
+				isAutoScrolling = false
+				currentScrollTop = savedScrollTop
+				scrollTop.value = savedScrollTop
+			}, 30)
+		}
+
+		restore()
+		focusScrollTimer = setTimeout(restore, 50)
+		focusScrollTimer = setTimeout(restore, 150)
+		focusScrollTimer = setTimeout(restore, 300)
+	}
+
 	function setupObserver() {
 		if (typeof MutationObserver === 'undefined') return
 		if (!listContentRef.value) return
-
 		const el = listContentRef.value.$el || listContentRef.value
 		if (!el) return
 
 		observer = new MutationObserver((mutations) => {
-			// 内容变化，重新测量
 			measureContent()
+
+			// ★ 只在「.list-content 直接子节点」增加时（新增卡片）才滚动到底部
+			// subtree: false 保证了卡片内部 DOM 变化不触发
+			const hasAddedCard = mutations.some(m =>
+				m.type === 'childList' &&
+				m.addedNodes &&
+				m.addedNodes.length > 0
+			)
+			if (!hasAddedCard) return
+
+			// 双重 rAF 确保 Safari 完成布局
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					measureContent()
+					const visibleHeight = viewportHeight || listHeight.value
+					const maxScrollTop = Math.max(0, contentHeight - visibleHeight)
+
+					if (maxScrollTop > 0 && Math.abs(currentScrollTop - maxScrollTop) > 2) {
+						isAutoScrolling = true
+						scrollTop.value = maxScrollTop
+
+						if (scrollFinalizeTimer) clearTimeout(scrollFinalizeTimer)
+						scrollFinalizeTimer = setTimeout(() => {
+							isAutoScrolling = false
+							currentScrollTop = maxScrollTop
+							scrollTop.value = maxScrollTop
+						}, 350)
+					}
+				})
+			})
 		})
 
 		observer.observe(el, {
-			childList: true, // 子节点增删
-			subtree: true, // 监听所有后代
-			attributes: false, // 不监听属性，减少开销
+			childList: true,
+			subtree: false, // ★★★ 关键修复：不递归，卡片内部变化不触发
+			attributes: false,
 			characterData: false
 		})
 	}
 
 	const functionKeys = getKeyOptions()
-
-	// ===== 列表数据 =====
 	const list = ref([])
 
-	// ===== 加载已有配置到列表 =====
 	function loadToList() {
 		const offsets = loadOffsets()
 		const arr = []
@@ -230,22 +342,19 @@
 	onMounted(async () => {
 		loadToList()
 
-		// 计算 scroll-view 高度
 		const query = uni.createSelectorQuery()
 		query.select('.page').boundingClientRect(rect => {
-			if (rect) {
-				listHeight.value = Math.max(100, rect.height - 80)
-			}
+			if (rect) listHeight.value = Math.max(100, rect.height - 80)
 		}).exec()
 
+		// ★ 关键：等 2 帧 + 100ms，确保 scroll-view 内部 main.value 已就绪
 		await nextTick()
-		await new Promise(resolve => setTimeout(resolve, 50))
+		await new Promise(r => requestAnimationFrame(r))
+		await new Promise(r => requestAnimationFrame(r))
+		await new Promise(r => setTimeout(r, 100))
 
-		// 测量初始尺寸
 		measureContent()
 		measureViewport()
-
-		// 启动 MutationObserver
 		setupObserver()
 	})
 
@@ -254,9 +363,16 @@
 			observer.disconnect()
 			observer = null
 		}
+		if (focusScrollTimer) {
+			clearTimeout(focusScrollTimer)
+			focusScrollTimer = null
+		}
+		if (scrollFinalizeTimer) {
+			clearTimeout(scrollFinalizeTimer)
+			scrollFinalizeTimer = null
+		}
 	})
 
-	// ===== key 索引 =====
 	function getKeyIndex(key) {
 		const i = functionKeys.findIndex(f => f.key === key)
 		return i >= 0 ? i : 0
@@ -266,15 +382,13 @@
 		return getLabel(key)
 	}
 
-	// ===== 增删改 =====
 	async function addRow() {
 		list.value.push({
 			key: functionKeys[0].key,
 			base: '0x0',
 			chain: ['0x0']
 		})
-		// 新增后滚到底部
-		await scrollToBottom()
+		// DOM 变更会自动触发 MutationObserver，由观察器执行平滑滚动，避免 Safari 布局时序导致的浮空问题
 	}
 
 	function removeRow(idx) {
@@ -282,27 +396,44 @@
 	}
 
 	function onKeyChange(idx, e) {
-		const i = e.detail.value
+		// 原生 <select> 的 e.target.value 是字符串，转成数字索引
+		const raw = e.target && e.target.value !== undefined ?
+			e.target.value :
+			e.detail && e.detail.value
+		const i = parseInt(raw, 10)
+		if (isNaN(i) || !functionKeys[i]) return
 		list.value[idx].key = functionKeys[i].key
 	}
 
+	const MAX_CHAIN = 6
+
 	async function addChain(idx) {
-		list.value[idx].chain.push('0x0')
-		// 加一级后也滚到底部（可选）
-		await scrollToBottom()
+		const item = list.value[idx]
+		if (item.chain.length >= MAX_CHAIN) {
+			uni.showToast({
+				title: `最多 ${MAX_CHAIN} 级偏移`,
+				icon: 'none'
+			})
+			return
+		}
+
+		item.chain.push('0x0')
+		await nextTick()
+		await new Promise(resolve => setTimeout(resolve, 30))
+		await scrollToIndex(idx)
 	}
 
-	function removeChain(idx, ci) {
+	async function removeChain(idx, ci) {
 		list.value[idx].chain.splice(ci, 1)
+		await nextTick()
+		await scrollToIndex(idx)
 	}
 
-	// ===== 预览格式化 =====
 	function formatPreview(item) {
 		const chainStr = item.chain.join(', ')
 		return `[${item.base}, [${chainStr}]]`
 	}
 
-	// ===== 保存 =====
 	function onSave() {
 		const seen = new Set()
 		for (let i = 0; i < list.value.length; i++) {
@@ -353,7 +484,6 @@
 		}
 	}
 
-	// ===== 恢复默认 =====
 	function onReset() {
 		uni.showModal({
 			title: '恢复默认',
@@ -371,7 +501,6 @@
 		})
 	}
 
-	// ===== 复制为 JS 代码 =====
 	function onCopy() {
 		const offsets = loadOffsets()
 		const jsCode = exportAsJS(offsets)
@@ -385,6 +514,275 @@
 			}
 		})
 	}
+
+	// ================= 导入指针链 =================
+
+	function openImport() {
+		if (functionKeys.length === 0) {
+			uni.showToast({
+				title: '没有可选功能',
+				icon: 'none'
+			})
+			return
+		}
+		importTargetKey.value = functionKeys[0].key
+		showFuncPicker.value = true
+	}
+
+	function closeFuncPicker() {
+		showFuncPicker.value = false
+	}
+
+	function onFuncPicked() {
+		if (!importTargetKey.value) return
+		showFuncPicker.value = false
+		choosePointerFile()
+	}
+
+	// ========== H5 使用原生文件选择器，宿主环境使用 h5gg 文件选择器 ==========
+	function choosePointerFile() {
+		// #ifdef H5
+		if (typeof document !== 'undefined' && document.body) {
+			// 必须使用真实 HTML input；uni-app 的 input ref 在 Safari 中不是原生节点。
+			const input = document.createElement('input')
+			input.type = 'file'
+			input.accept = '.txt,text/plain'
+			input.style.position = 'fixed'
+			input.style.left = '-10000px'
+			input.style.top = '0'
+			input.style.width = '1px'
+			input.style.height = '1px'
+			input.style.opacity = '0'
+			input.setAttribute('aria-hidden', 'true')
+			document.body.appendChild(input)
+
+			let cleaned = false
+			const cleanup = () => {
+				if (cleaned) return
+				cleaned = true
+				if (input.parentNode) input.parentNode.removeChild(input)
+			}
+			input.addEventListener('change', (event) => {
+				const file = event.target.files && event.target.files[0]
+				cleanup()
+				if (file) handlePickedFile(file)
+			}, {
+				once: true
+			})
+			input.click()
+			return
+		}
+
+		uni.showToast({
+			title: '当前环境不支持文件选择',
+			icon: 'none'
+		})
+		// #endif
+
+		// #ifndef H5
+		if (typeof h5gg === 'undefined' || typeof h5gg.pickScriptFile !== 'function') {
+			uni.showToast({
+				title: '当前环境不支持文件选择',
+				icon: 'none'
+			})
+			return
+		}
+		h5gg.pickScriptFile(function(filePath) {
+			if (!filePath) return
+			handlePickedFile(filePath)
+		})
+		// #endif
+	}
+
+	// ========== 处理选中的文件（完整流程） ==========
+	async function handlePickedFile(input) {
+		// ★ 只验证前 50 条
+		const MAX_VERIFY = 50
+		let lastUpdate = 0
+
+		function updateProgress(text, force = false) {
+			const now = Date.now()
+			if (!force && now - lastUpdate < 80) return
+			lastUpdate = now
+			uni.showLoading({
+				title: text,
+				mask: true
+			})
+		}
+
+		uni.showLoading({
+			title: '准备中 0%',
+			mask: true
+		})
+
+		try {
+			// ===== 1. 读取文件（0% ~ 30%）=====
+			let text = ''
+			const fileObj = extractFile(input)
+
+			if (fileObj) {
+				console.log('[handlePickedFile] 用 File 对象流式读取')
+				text = await readFileStream(
+					fileObj,
+					(read, total) => {
+						const pct = total > 0 ? Math.floor((read / total) * 30) : 0
+						updateProgress(`读取中${pct}%`)
+					},
+					64 * 1024
+				)
+			} else if (typeof input === 'string') {
+				console.log('[handlePickedFile] 用路径读取')
+				const {
+					readFileByPath
+				} = await import('@/common/fileReader.js')
+				text = await readFileByPath(input, (read, total) => {
+					const pct = total > 0 ? Math.floor((read / total) * 30) : 0
+					updateProgress(`读取中 ${pct}%`)
+				})
+			} else {
+				throw new Error('未知的文件输入类型')
+			}
+
+			console.log('[handlePickedFile] 读取完成，长度:', text.length)
+
+			// ===== 2. 文件头识别（30%）—— 不再硬拒绝 =====
+			updateProgress('识别文件格式 30%', true)
+			const headerInfo = checkHeader(text)
+			console.log('[handlePickedFile] 文件头信息:', headerInfo)
+			// 注意：格式 A 没有文件头，照样继续走 parseText
+
+			// ===== 3. 解析（30% ~ 40%）—— parseText 自动识别 A/B =====
+			updateProgress('解析中 35%', true)
+			const raw = parseText(text, 'Sky-iOS-Gold')
+			console.log('[handlePickedFile] 解析出原始条目:', raw.length)
+
+			if (raw.length === 0) {
+				uni.hideLoading()
+				uni.showToast({
+					title: '未找到可解析的指针链\n支持 MemoryTool 导出 / Sky-iOS-Gold+0x... 行',
+					icon: 'none',
+					duration: 3500
+				})
+				return
+			}
+
+			const allItems = raw.map(toChainPair)
+			const items = allItems.slice(0, MAX_VERIFY)
+			console.log('[handlePickedFile] 取前', items.length, '条验证（总共', allItems.length, '条）')
+
+			updateProgress(`解析完成 共${allItems.length}条 / 验证${items.length}条 40%`, true)
+
+			// ===== 4. 分片验证（40% ~ 95%）=====
+			const verified = await filterStableChains(
+				items,
+				typeof h5gg !== 'undefined' ? h5gg : null,
+				() => {
+					if (typeof h5gg === 'undefined') return null
+					const l = h5gg.getRangesList(0)
+					return (l && l.length) ? {
+						mainBase: l[0].start
+					} : null
+				},
+				(done, total, currentItem, isStable) => {
+					const pct = 40 + Math.floor((done / total) * 55)
+					const flag = isStable ? '✓' : '✗'
+					updateProgress(`验证${flag} ${done}/${total} ${pct}%`)
+				}
+			)
+
+			console.log('[handlePickedFile] 验证通过:', verified.length, '条')
+
+			// ===== 5. 完成 =====
+			updateProgress('完成 100%', true)
+			await new Promise(r => setTimeout(r, 200))
+			uni.hideLoading()
+
+			if (verified.length === 0) {
+				uni.showToast({
+					title: '没有可用的指针链（全部断裂）',
+					icon: 'none',
+					duration: 3000
+				})
+				return
+			}
+
+			// ===== 6. toast =====
+			uni.showToast({
+				title: `可用 ${verified.length} / ${items.length} 条`,
+				icon: 'success',
+				duration: 1800
+			})
+
+			// ===== 7. 应用第一条 =====
+			await applyChainToTarget(verified[0])
+
+		} catch (e) {
+			console.error('[handlePickedFile] 失败', e)
+			uni.hideLoading()
+			uni.showToast({
+				title: '导入失败：' + (e.message || e),
+				icon: 'none',
+				duration: 3000
+			})
+		}
+	}
+
+	// ★ 把某条链应用到当前 importTargetKey 对应的 list 项 + 自动保存
+	async function applyChainToTarget(c) {
+		if (!c) return
+		const key = importTargetKey.value
+		if (!key) return
+
+		let idx = list.value.findIndex(it => it.key === key)
+		if (idx === -1) {
+			// 目标功能不存在 → 新增一行
+			list.value.push({
+				key,
+				base: '0x0',
+				chain: ['0x0']
+			})
+			idx = list.value.length - 1
+		}
+
+		// ★ 替换掉对应功能的链
+		list.value[idx].base = c.baseHex
+		list.value[idx].chain = c.offsetHexes.slice()
+
+		// 高亮
+		highlightIndex.value = idx
+		setTimeout(() => {
+			highlightIndex.value = -1
+		}, 1500)
+
+		// 滚动到该项
+		await scrollToIndex(idx)
+
+		// 清缓存，让后续功能重新拿指针
+		clearOffsets()
+		clearAllAddrCache()
+
+		// 自动保存到 localStorage
+		try {
+			const offsets = {}
+			for (const item of list.value) {
+				const base = parseInt(item.base, 16)
+				const chain = item.chain.map(s => parseInt(s, 16)).filter(n => !isNaN(n))
+				if (isNaN(base)) continue
+				offsets[item.key] = [base, chain]
+			}
+			if (saveOffsets(offsets)) {
+				console.log('[applyChainToTarget] 自动保存成功')
+			}
+		} catch (e) {
+			console.warn('[applyChainToTarget] 自动保存失败', e)
+		}
+	}
+
+
+	async function paste(idx) {
+		console.log(idx);
+
+	}
 </script>
 
 <style scoped>
@@ -394,13 +792,11 @@
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
-		/* ★ 关键 */
 		padding: 4px;
 		background: transparent;
 		font-size: 12px;
 	}
 
-	/* 顶部操作栏 */
 	.toolbar {
 		display: flex;
 		align-items: center;
@@ -420,58 +816,75 @@
 	.toolbar .tools {
 		display: flex;
 		gap: 6px;
+		flex-wrap: wrap;
 	}
 
-	/* 列表 */
 	.list {
 		flex: 1;
 		overflow-y: auto;
 		scrollbar-width: none;
 		min-height: 0;
-		/* ★ 关键 */
+		overflow-anchor: none;
 	}
 
 	.list::-webkit-scrollbar {
 		display: none;
 	}
 
-	/* 卡片 */
 	.card {
 		background: rgba(255, 255, 255, 0.28);
 		border: 1px solid rgba(255, 255, 255, 0.4);
 		border-radius: 12px;
 		padding: 8px;
 		margin-bottom: 8px;
+		transition: box-shadow 0.3s, border-color 0.3s, background 0.3s;
+		transform: translateZ(0);
+		-webkit-transform: translateZ(0);
+		will-change: transform;
+	}
+
+	.card-active {
+		background: rgba(52, 199, 89, 0.25);
+		border-color: #34c759;
+		box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.5);
 	}
 
 	.card-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 6px;
+		margin-bottom: 4px;
 	}
 
-	.key-picker {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 4px 8px;
-		background: rgba(255, 255, 255, 0.5);
-		border-radius: 8px;
+	.key-select {
+		flex: 1;
 		min-width: 140px;
-	}
-
-	.key-label {
-		color: #1e2a2e;
+		max-width: 100%;
+		padding: 4px 22px 4px 8px;
+		border: 1px solid rgba(255, 255, 255, 0.5);
+		border-radius: 8px;
+		font-size: 12px;
 		font-weight: 500;
+		color: #1e2a2e;
+		background-color: rgba(255, 255, 255, 0.5);
+		height: 26px;
+		box-sizing: border-box;
+		outline: none;
+		-webkit-appearance: none;
+		appearance: none;
+		/* 自绘下拉箭头 */
+		background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23444' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 6px center;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		overflow: hidden;
 	}
 
-	.key-code {
-		color: #666;
-		font-size: 11px;
+	.key-select:focus {
+		border-color: #FFD966;
 	}
 
-	/* 行 */
 	.row {
 		display: flex;
 		align-items: center;
@@ -487,9 +900,7 @@
 		font-size: 12px;
 		height: 100%;
 		line-height: 20px;
-		/* ★ 文字垂直居中 */
 		display: flex;
-		/* ★ 或用 flex 居中 */
 		align-items: center;
 	}
 
@@ -502,14 +913,13 @@
 		color: #333;
 		height: 100%;
 		min-height: 0;
-		/* ★ 关键：去掉默认最小高度 */
 		box-sizing: border-box;
-		/* ★ 关键：padding 算进高度 */
 		line-height: 20px;
-		/* ★ 文字垂直居中 */
+		scroll-margin: 0;
+		scroll-margin-top: 0;
+		scroll-margin-bottom: 0;
 	}
 
-	/* 偏移链 */
 	.chain-block {
 		margin-bottom: 6px;
 	}
@@ -521,6 +931,18 @@
 		margin-bottom: 4px;
 	}
 
+	.mini-btn.add-chain.is-disabled {
+		background: #c7c7cc;
+		color: #fff;
+		opacity: 0.7;
+	}
+
+	.mini-btn.add-chain:disabled {
+		background: #c7c7cc;
+		color: #fff;
+		opacity: 0.7;
+	}
+
 	.chain-list {
 		display: flex;
 		flex-direction: column;
@@ -530,11 +952,9 @@
 	.chain-item {
 		display: flex;
 		align-items: center;
-		/* ★ 改回 center，子元素垂直居中 */
 		gap: 6px;
 		height: 20px;
 	}
-
 
 	.chain-input {
 		flex: 1;
@@ -545,11 +965,11 @@
 		color: #1e2a2e;
 		height: 100%;
 		min-height: 0;
-		/* ★ 关键 */
 		box-sizing: border-box;
-		/* ★ 关键 */
 		line-height: 20px;
-		/* ★ 文字垂直居中 */
+		scroll-margin: 0;
+		scroll-margin-top: 0;
+		scroll-margin-bottom: 0;
 	}
 
 	.chain-idx {
@@ -559,12 +979,10 @@
 		font-size: 11px;
 		font-family: monospace;
 		line-height: 20px;
-		/* ★ 文字垂直居中 */
 		display: flex;
 		align-items: center;
 	}
 
-	/* 预览 */
 	.preview {
 		display: flex;
 		align-items: center;
@@ -587,7 +1005,6 @@
 		word-break: break-all;
 	}
 
-	/* 空状态 */
 	.empty {
 		text-align: center;
 		padding: 40px 0;
@@ -595,14 +1012,13 @@
 		font-size: 12px;
 	}
 
-	/* 按钮 */
 	.mini-btn {
-		padding: 4px 10px;
+		padding: 8px 16px;
 		border: none;
 		border-radius: 12px;
 		font-size: 11px;
 		cursor: pointer;
-		line-height: 1.2;
+		line-height: 1;
 	}
 
 	.mini-btn::after {
@@ -617,7 +1033,13 @@
 	.mini-btn.del {
 		background: #ff3b30;
 		color: #fff;
-		margin: 0;
+		margin: 0 0 0 4px;
+	}
+
+	.mini-btn.paste {
+		background: #007aff;
+		color: #fff;
+		margin: 0 0 0 4px;
 	}
 
 	.mini-btn.reset {
@@ -630,19 +1052,23 @@
 		color: #fff;
 	}
 
+	.mini-btn.import {
+		background: #ff9500;
+		color: #fff;
+	}
+
 	.mini-btn.add-chain {
 		background: #007aff;
 		color: #fff;
-		padding: 2px 8px;
+		padding: 4px 8px;
 	}
 
 	.mini-btn.del-chain {
 		background: #ff3b30;
 		color: #fff;
-		padding: 2px 8px;
+		padding: 4px 8px;
 	}
 
-	/* 底部 */
 	.footer {
 		padding-top: 6px;
 	}
@@ -664,5 +1090,74 @@
 
 	.save-btn:active {
 		background: #FFE28A;
+	}
+
+	/* ===== 弹窗样式 ===== */
+	.modal-mask {
+		position: fixed;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.45);
+		height: 100vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 9999;
+	}
+
+	.modal-box {
+		width: 90%;
+		background: #f2f2f7;
+		border-radius: 14px;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		padding: 6px;
+		box-sizing: border-box;
+	}
+
+	.modal-title {
+		font-size: 14px;
+		font-weight: 600;
+		color: #1e2a2e;
+		padding: 0;
+		text-align: center;
+	}
+
+	.modal-list {
+		flex: 1;
+		min-height: 0;
+		/* max-height: 300px; */
+		/* background: rgba(255, 255, 255, 0.7); */
+		border-radius: 10px;
+		/* margin: 4px; */
+	}
+
+	.modal-item {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 6px;
+		border-radius: 8px;
+		font-size: 13px;
+		color: #1e2a2e;
+	}
+
+	.modal-item.active {
+		background: #FFD966;
+		font-weight: 600;
+	}
+
+	.modal-item-code {
+		color: #888;
+		font-size: 11px;
+		margin-left: 6px;
+	}
+
+	.modal-footer {
+		display: flex;
+		align-items: center;
 	}
 </style>

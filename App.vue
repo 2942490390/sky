@@ -14,13 +14,25 @@
 	} from '@/common/versionCheck.js'
 	import {
 		startResponsiveCheck,
-		stopResponsiveCheck
+		stopResponsiveCheck,
+		forceReloadPage
 	} from '@/common/responsiveChecker.js'
 	import {
 		useReload
 	} from '@/common/useReload.js'
+	import {
+		installInteractionWatchdog
+	} from '@/common/interactionWatchdog.js'
+	import {
+		installGestureBlocker
+	} from '@/common/gestureBlocker.js'
+	import {
+		installTapOnly
+	} from '@/common/tapOnly.js'
 
-	// ★ 1. 面板可见性由 Vue 响应式控制，替代手动 display 操作
+
+
+	// ★ 1. 面板可见性由 Vue 响应式控制
 	const panelVisible = ref(true)
 
 	const {
@@ -30,10 +42,47 @@
 	// ★ 2. 提为模块级变量，确保 add/remove 引用同一函数
 	let vvHandler = null
 	let onFocusOut = null
-	// ★ 3. 记录所有内部定时器，卸载时统一清理
+	let onFocusIn = null // ★ 新增：聚焦处理器
+	let onWindowScroll = null // ★ 新增：窗口滚动锁
+	let lockedScrollY = 0 // ★ 新增：锁定的滚动位置
+
+	// ★ 3. 记录所有内部定时器
 	let focusOutTimer = null
 	let vvTimer = null
 	let reloadTimer = null
+	let stopInteractionWatchdog = null
+	let stopGestureBlocker = null // ★ 新增
+	let stopTapOnly = null // ★ 新增
+
+	// ★ 4. 滚动锁定标志
+	let isScrollLocked = false
+
+	// ★ 增加修复锁，防止重复触发导致时序混乱
+	let isRepairing = false
+
+	async function repairInteractionLayer(reason, detail) {
+		if (isRepairing) return
+		isRepairing = true
+
+		console.warn('[interaction] 自动修复按钮命中层:', reason, detail)
+		uni.showToast({
+			title: '正在修复交互层...',
+			icon: 'none',
+			duration: 1500
+		})
+
+		// 给 toast 一点时间显示，然后整页重载
+		setTimeout(() => {
+			try {
+				if (typeof location !== 'undefined' && typeof location.reload === 'function') {
+					location.reload()
+				}
+			} catch (e) {
+				console.error('[interaction] 刷新失败:', e)
+				isRepairing = false
+			}
+		}, 800)
+	}
 
 	onMounted(() => {
 		initWindowLayout((rect) => {
@@ -45,62 +94,172 @@
 		})
 
 		// #ifdef H5
-		// ★ 启动版本检查（仅 H5 端）
 		startVersionCheck({
-			url: '', // 留空自动找，或写死 '/assets/index.js'
+			url: '',
 			interval: 60 * 1000
 		})
 
 		startResponsiveCheck((type, detail) => {
 			console.warn('页面无响应:', type, detail)
 
-			// 1. 先尝试轻量恢复（清缓存 + 重渲染）
 			try {
 				reload()
 			} catch (e) {
 				console.error('reload 失败', e)
 			}
 
-			// 2. 兜底：延迟强制刷新（用 replace 避免返回键回到卡死页）
-			if (reloadTimer) clearTimeout(reloadTimer)
-			reloadTimer = setTimeout(() => {
-				window.location.replace(window.location.href)
-			}, 1500)
+			let recovered = false
+			let checkCount = 0
+			const maxCheck = 10
+
+			function checkRecovery() {
+				if (recovered || checkCount >= maxCheck) {
+					if (!recovered) {
+						console.warn('[responsive] 10 次检测未恢复，强制刷新')
+						forceReloadPage()
+					}
+					return
+				}
+
+				checkCount++
+				requestAnimationFrame(() => {
+					recovered = true
+					console.log('[responsive] 主线程已恢复')
+				})
+
+				setTimeout(checkRecovery, 1000)
+			}
+
+			checkRecovery()
 		})
 		// #endif
 
 		if (typeof document === 'undefined') return
 
-		// ★ 键盘收起后强制重排
-		// 用 Vue 响应式控制，避免手动操作 DOM 导致 uni-app 内部引用变 null
-		onFocusOut = (e) => {
-			const tag = e.target.tagName
+		// 1. 交互层看门狗：诊断 hit-test 偏移
+		try {
+			stopInteractionWatchdog = installInteractionWatchdog(repairInteractionLayer)
+		} catch (err) {
+			console.error('[App] installInteractionWatchdog 失败:', err)
+			stopInteractionWatchdog = null
+		}
+
+		// 2. 手势拦截：双击、长按、contextmenu
+		try {
+			stopGestureBlocker = installGestureBlocker({
+				allowSelector: '[data-gesture-allow]'
+			})
+		} catch (err) {
+			console.error('[App] installGestureBlocker 失败:', err)
+			stopGestureBlocker = null
+		}
+
+		// 3. 只允许单击：滑动/长按不触发点击
+		try {
+			stopTapOnly = installTapOnly({
+				moveThreshold: 10,
+				maxDuration: 500,
+				allowSelector: 'input, textarea, [contenteditable="true"], [data-tap-allow]'
+			})
+		} catch (err) {
+			console.error('[App] installTapOnly 失败:', err)
+			stopTapOnly = null
+		}
+
+		// ============================================================
+		// ★ 核心修复：聚焦时锁定页面滚动，防止浏览器 scrollIntoView
+		// ============================================================
+		onFocusIn = (e) => {
+			const tag = e.target && e.target.tagName
 			if (tag !== 'INPUT' && tag !== 'TEXTAREA') return
+
+			// 记录当前滚动位置
+			lockedScrollY = window.scrollY ||
+				document.documentElement.scrollTop ||
+				document.body.scrollTop || 0
+
+			isScrollLocked = true
+
+			// 浏览器 scrollIntoView 是异步的，用双 rAF 抢在它之后恢复
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					if (isScrollLocked) {
+						window.scrollTo(0, lockedScrollY)
+						if (document.documentElement) {
+							document.documentElement.scrollTop = lockedScrollY
+						}
+						if (document.body) {
+							document.body.scrollTop = lockedScrollY
+						}
+					}
+				})
+			})
+		}
+		document.addEventListener('focusin', onFocusIn, true)
+
+		// ★ 监听窗口滚动，聚焦期间强制拉回
+		onWindowScroll = () => {
+			if (!isScrollLocked) return
+			const cur = window.scrollY ||
+				document.documentElement.scrollTop ||
+				document.body.scrollTop || 0
+			if (Math.abs(cur - lockedScrollY) > 1) {
+				window.scrollTo(0, lockedScrollY)
+				if (document.documentElement) {
+					document.documentElement.scrollTop = lockedScrollY
+				}
+				if (document.body) {
+					document.body.scrollTop = lockedScrollY
+				}
+			}
+		}
+		window.addEventListener('scroll', onWindowScroll, {
+			passive: true
+		})
+
+		// ============================================================
+		// ★ 失焦处理：解锁滚动 + 强制重排
+		// ============================================================
+		onFocusOut = (e) => {
+			const tag = e.target && e.target.tagName
+			if (tag !== 'INPUT' && tag !== 'TEXTAREA') return
+
+			// 解锁滚动
+			isScrollLocked = false
 
 			if (focusOutTimer) clearTimeout(focusOutTimer)
 			focusOutTimer = setTimeout(async () => {
 				// 1. 重置页面滚动
-				if (window.scrollTo) window.scrollTo(0, 0)
+				window.scrollTo(0, 0)
 				if (document.documentElement) document.documentElement.scrollTop = 0
 				if (document.body) document.body.scrollTop = 0
 
 				// 2. 触发 resize
 				window.dispatchEvent(new Event('resize'))
 
-				// 3. 通过 Vue 响应式触发重排（不再手动 display:none）
+				// 3. 通过 Vue 响应式触发重排
 				panelVisible.value = false
 				await nextTick()
 				panelVisible.value = true
 			}, 100)
 		}
 
-		document.addEventListener('focusout', onFocusOut)
+		document.addEventListener('focusout', onFocusOut, true)
 
+		// ============================================================
 		// ★ visualViewport 监听（更精确）
+		// ============================================================
 		if (window.visualViewport) {
 			vvHandler = () => {
 				const vv = window.visualViewport
 				const keyboardHeight = window.innerHeight - vv.height
+
+				// 键盘弹出时，继续保持锁定
+				if (keyboardHeight >= 50 && isScrollLocked) {
+					window.scrollTo(0, lockedScrollY)
+					return
+				}
+
 				// 键盘收起
 				if (keyboardHeight < 50) {
 					if (vvTimer) clearTimeout(vvTimer)
@@ -115,10 +274,34 @@
 	})
 
 	onUnmounted(() => {
-		// ★ 只在存在时才移除，避免移除 null 引用
+		if (stopInteractionWatchdog) {
+			stopInteractionWatchdog()
+			stopInteractionWatchdog = null
+		}
+		if (stopGestureBlocker) {
+			stopGestureBlocker()
+			stopGestureBlocker = null
+		}
+		if (stopTapOnly) {
+			stopTapOnly()
+			stopTapOnly = null
+		}
+
+		if (onFocusIn) {
+			document.removeEventListener('focusin', onFocusIn, true)
+			onFocusIn = null
+		}
+
 		if (onFocusOut) {
-			document.removeEventListener('focusout', onFocusOut)
+			document.removeEventListener('focusout', onFocusOut, true)
 			onFocusOut = null
+		}
+
+		if (onWindowScroll) {
+			window.removeEventListener('scroll', onWindowScroll, {
+				passive: true
+			})
+			onWindowScroll = null
 		}
 
 		if (window.visualViewport && vvHandler) {
@@ -126,7 +309,6 @@
 			vvHandler = null
 		}
 
-		// ★ 清理所有定时器，防止卸载后仍在执行
 		if (focusOutTimer) {
 			clearTimeout(focusOutTimer)
 			focusOutTimer = null
@@ -139,6 +321,10 @@
 			clearTimeout(reloadTimer)
 			reloadTimer = null
 		}
+		if (stopInteractionWatchdog) {
+			stopInteractionWatchdog()
+			stopInteractionWatchdog = null
+		}
 
 		// #ifdef H5
 		stopVersionCheck()
@@ -148,14 +334,48 @@
 </script>
 
 <template>
-	<!-- ★ 用 v-show 控制面板可见性，由 Vue 统一调度 display 切换 -->
-	<div class="glass-panel" v-show="panelVisible">
+	<div v-show="panelVisible">
 		<slot />
 	</div>
 </template>
 
 <style>
 	@import url('https://cdn.bootcdn.net/ajax/libs/font-awesome/7.2.0/css/all.min.css');
+
+	html,
+	body {
+		/* ★ 禁止双击缩放，保留单击和滑动 */
+		touch-action: manipulation;
+	}
+
+	* {
+		margin: 0;
+		padding: 0;
+		box-sizing: border-box;
+		-webkit-touch-callout: none;
+		-webkit-user-select: none;
+		user-select: none;
+		font-family: -apple-system, system-ui, sans-serif;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	/* 输入框例外：允许选择、允许 callout */
+	input,
+	textarea,
+	[contenteditable="true"] {
+		-webkit-user-select: text;
+		user-select: text;
+		-webkit-touch-callout: default;
+		touch-action: auto;
+	}
+
+	/* 需要允许双击/长按的元素 */
+	[data-gesture-allow] {
+		touch-action: auto;
+		-webkit-user-select: text;
+		user-select: text;
+		-webkit-touch-callout: default;
+	}
 
 	button {
 		min-height: 0;
@@ -178,14 +398,16 @@
 		appearance: none;
 	}
 
-	/* ================== 全局重置（原 * 规则） ================== */
+	/* ================== 全局重置 ================== */
 	page {
 		background: transparent;
 		min-height: 100vh;
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		/* ★ 关键：不再用 flex 居中，避免键盘弹出时布局被推挤 */
+		display: block;
 		border: none;
+		/* ★ 禁止页面本身滚动 */
+		overflow: hidden;
+		position: relative;
 	}
 
 	* {
@@ -197,31 +419,52 @@
 		user-select: none;
 		font-family: -apple-system, system-ui, sans-serif;
 		-webkit-tap-highlight-color: transparent;
+		-webkit-touch-callout: none;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
-	.scale-wrap {
-		transform-origin: center;
-		transition: transform 0.2s ease;
+	uni-toast,
+	.uni-toast__content {
+		font-size: 12px;
 	}
 
-	/* ================== 玻璃面板基础 ================== */
+
+	/* ================== 玻璃面板 ================== */
+	/* 外层：fixed 铺满视口，flex 居中 */
 	.glass-panel {
+		position: fixed;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 100;
+		pointer-events: none;
+		/* 空白区域不吃点击 */
+	}
+
+	/* 内层：真正面板 */
+	.glass-inner {
+		pointer-events: auto;
 		display: flex;
 		flex-direction: row;
 		overflow: hidden;
 		clip-path: inset(0 round 26px);
-		width: calc(var(--panel-w, 596px));
-		height: calc(var(--panel-h, 372px));
+		width: var(--panel-w, 596px);
+		height: var(--panel-h, 372px);
 		padding: 10px;
 		background: #1a1a2e;
 		box-sizing: border-box;
 		position: relative;
-		/* 动画时长设为 1 分钟，与切换节奏同步 */
-		animation: toneShift 60s ease-in-out infinite;
+
+		/* ★ 新增：缩放过渡 + 缩放原点居中 */
+		transform-origin: center center;
+		transition: transform 0.2s ease;
+		will-change: transform;
 	}
 
-	/* ================== 第一层：底层大曲面（沙金 + 紫罗兰） ================== */
-	.glass-panel::before {
+	/* ================== 第一层：底层大曲面 ================== */
+	.glass-inner::before {
 		content: '';
 		position: absolute;
 		inset: 0;
@@ -241,8 +484,8 @@
 		pointer-events: none;
 	}
 
-	/* ================== 第二层：叠加"花瓣折叠"的光影 ================== */
-	.glass-panel::after {
+	/* ================== 第二层：花瓣折叠光影 ================== */
+	.glass-inner::after {
 		content: '';
 		position: absolute;
 		inset: 0;
@@ -261,9 +504,21 @@
 		pointer-events: none;
 	}
 
-	.glass-panel>* {
+	.glass-inner>* {
 		position: relative;
 		z-index: 1;
+	}
+
+	html.sky-hit-test-repair .glass-inner {
+		clip-path: none !important;
+		-webkit-transform: translateZ(0) !important;
+		transform: translateZ(0) !important;
+		will-change: transform !important;
+	}
+
+	html.sky-hit-test-repair .glass-inner * {
+		-webkit-backdrop-filter: none !important;
+		backdrop-filter: none !important;
 	}
 
 	/* ================== 1 分钟色调切换动画 ================== */
@@ -279,9 +534,9 @@
 		}
 	}
 
-	/* ================== 深色模式（可选，与动画叠加） ================== */
+	/* ================== 深色模式 ================== */
 	@media (prefers-color-scheme: dark) {
-		.glass-panel::before {
+		.glass-inner::before {
 			background:
 				radial-gradient(ellipse 80% 60% at 30% 20%,
 					rgba(168, 200, 232, 0.85) 0%,
@@ -295,7 +550,7 @@
 					#0a0e1f 100%);
 		}
 
-		.glass-panel::after {
+		.glass-inner::after {
 			background:
 				radial-gradient(ellipse 60% 40% at 30% 25%,
 					rgba(180, 210, 240, 0.5) 0%,
@@ -407,8 +662,7 @@
 		height: 100%;
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
-		padding: 4px;
+		gap: 6px;
 		overflow-y: auto;
 		scrollbar-width: none;
 		-ms-overflow-style: none;
@@ -431,7 +685,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 10px;
+		padding: 4px;
 		background: rgba(255, 255, 255, 0.25);
 		backdrop-filter: blur(8px);
 		border: 1px solid rgba(255, 255, 255, 0.4);
@@ -456,7 +710,7 @@
 	}
 
 	.sky-btn {
-		padding: 6px 18px;
+		/* padding: 6px 18px; */
 		background: #FFD966;
 		border: none;
 		border-radius: 40px;
@@ -477,8 +731,13 @@
 		transform: scale(0.98);
 	}
 
+	.sky-btn.stop,
+	.sky-btn.axis {
+		margin: 0 0 0 4px;
+	}
+
 	.sky-btn-toggle {
-		padding: 6px 18px;
+		/* padding: 6px 18px; */
 		background: #7C9EB2;
 		border: none;
 		border-radius: 40px;

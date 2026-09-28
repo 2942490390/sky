@@ -1,7 +1,7 @@
 <template>
 	<view class="left-area">
-		<view v-for="(item, index) in navItems" :key="index" class="aa" :class="{ active: activeIndex === index }"
-			@click="emit('change', index)">
+		<view v-for="(item, index) in navItems" :key="index" class="sidebar-list"
+			:class="{ active: activeIndex === index }" @tap="emit('change', index)">
 			<text :class="item.icon"></text>
 			<text>{{ item.label }}</text>
 		</view>
@@ -54,9 +54,20 @@
 </script>
 
 <style scoped>
-	/* 原 .left-area / .aa / .aa:hover / .aa.active */
+	/* 移动端不要用 hover */
+	@media (hover: hover) and (pointer: fine) {
+		.sidebar-list:hover {
+			background: rgba(255, 255, 255, .2);
+		}
+	}
+
+	/* 用 active 给触摸反馈 */
+	.sidebar-list:active {
+		background: rgba(255, 255, 255, .2);
+	}
+
 	.left-area {
-		flex: 0 0 20%;
+		flex: 0 0 15%;
 		/* ★ 固定占 20% 宽 */
 		display: flex;
 		flex-direction: column;
@@ -66,14 +77,14 @@
 		/* 覆盖原来的 absolute */
 		left: auto;
 		top: auto;
-		transform: none;
+		transform: translateZ(0); /* 提升为合成层，加速 hit-test */
 	}
 
 	.left-area::-webkit-scrollbar {
 		display: none;
 	}
 
-	.aa {
+	.sidebar-list {
 		padding: 8rpx;
 		background: rgba(255, 255, 255, 0.1);
 		border: 1px solid rgba(255, 255, 255, 0.3);
@@ -87,13 +98,18 @@
 		align-items: center;
 		gap: 8px;
 		flex-shrink: 0;
+		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
+		touch-action: manipulation;
+		user-select: none;
+		-webkit-user-select: none
 	}
 
-	.aa:hover {
+	.sidebar-list:hover {
 		background: rgba(255, 255, 255, .2);
 	}
 
-	.aa.active {
+	.sidebar-list.active {
 		background: #ADB5BD;
 		border-color: white;
 	}

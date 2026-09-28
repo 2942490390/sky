@@ -70,9 +70,9 @@ export function startVersionCheck(options = {}) {
             if (!msg) return
 
             if (msg.type === 'init') {
-                console.log('[versionCheck] 首次 hash:', msg.hash)
+                // console.log('[versionCheck] 首次 hash:', msg.hash)
             } else if (msg.type === 'changed') {
-                console.log('[versionCheck] hash 变化:', msg.oldHash, '→', msg.newHash)
+                // console.log('[versionCheck] hash 变化:', msg.oldHash, '→', msg.newHash)
                 showUpdateAlert(msg.newHash)
             }
         }
@@ -85,7 +85,7 @@ export function startVersionCheck(options = {}) {
         worker.postMessage({
             type: 'start',
             url: options.url || getEntryScriptUrl(),
-            interval: options.interval || 60 * 1000
+            interval: options.interval || 30 * 1000
         })
 
         started = true

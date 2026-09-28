@@ -175,10 +175,10 @@ function applyByCallbackSize(w, h) {
 	const x = Math.floor((screenW - winW) / 2)
 	const y = Math.floor((screenH - winH) / 2)
 
-	console.log('[windowLayout] 方向变化',
-		mode,
-		`回调宽高:${w}x${h}`,
-		`窗口:${winW}x${winH} @ (${x},${y})`)
+	// console.log('[windowLayout] 方向变化',
+	// 	mode,
+	// 	`回调宽高:${w}x${h}`,
+	// 	`窗口:${winW}x${winH} @ (${x},${y})`)
 
 	try {
 		setWindowRect(x, y, winW, winH)

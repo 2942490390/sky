@@ -2,7 +2,7 @@
 	<view class="page">
 		<!-- ★ 轮播容器 -->
 		<view class="carousel">
-			<image class="carousel-img" src="/static/banner1_664d82c1.png" mode="aspectFit" />
+			<image class="carousel-img" src="/static/lb1_31c85a23.png" mode="aspectFit" />
 			<image class="carousel-img" src="/static/lb2_e91841cd.png" mode="aspectFit" />
 			<image class="carousel-img" src="/static/lb3_4f5edaf6.png" mode="aspectFit" />
 			<image class="carousel-img" src="/static/lb4_577ed5e7.png" mode="aspectFit" />
@@ -91,11 +91,6 @@
 		height: 100%;
 		opacity: 0;
 		animation: carouselFade 30s infinite;
-		transform: translateZ(0);
-		/* ★ 强制 GPU 合成层 */
-		will-change: opacity;
-		/* ★ 提升到独立层 */
-		isolation: isolate;
 	}
 
 	/* 5 张图错开 6 秒 */

@@ -1,14 +1,49 @@
 <!DOCTYPE html>
 <html lang="cn">
-  <head>
-    <meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-    <title></title>
-    <!--preload-links-->
-    <!--app-context-->
-  </head>
-  <body>
-    <div id="app"><!--app-html--></div>
-    <script type="module" src="/main.js"></script>
-  </body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport"
+			content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+		<title>sky</title>
+		<style>
+			/* 禁止双击缩放、长按选择、长按 callout */
+			html,
+			body {
+				touch-action: manipulation;
+				/* ★ 关键：禁止双击缩放，但保留单击和滑动 */
+				-webkit-text-size-adjust: 100%;
+			}
+
+			* {
+				-webkit-touch-callout: none;
+				/* ★ 禁止 iOS 长按弹出菜单 */
+				-webkit-user-select: none;
+				/* ★ 禁止选择 */
+				user-select: none;
+				-webkit-tap-highlight-color: transparent;
+			}
+
+			/* 输入框例外：允许选择、允许 callout */
+			input,
+			textarea,
+			[contenteditable="true"] {
+				-webkit-user-select: text;
+				user-select: text;
+				-webkit-touch-callout: default;
+			}
+
+			/* 需要允许双击/长按的元素，加 data-gesture-allow */
+			[data-gesture-allow] {
+				touch-action: auto;
+				-webkit-user-select: text;
+				user-select: text;
+			}
+		</style>
+		<!--preload-links-->
+		<!--app-context-->
+	</head>
+	<body>
+		<div id="app"><!--app-html--></div>
+		<script type="module" src="/main.js"></script>
+	</body>
 </html>
