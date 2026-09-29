@@ -247,7 +247,7 @@ async function toggleAutoRun() {
 
 		if (isFreshStart) {
 			const input = prompt(
-				'输入间隔秒数\n太快拉回建议 3.8 秒\n晨岛开始',
+				'输入间隔秒数，建议 3.8 秒，晨岛开始',
 				String(autoRunInterval)
 			)
 			if (input === null) return

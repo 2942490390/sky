@@ -359,7 +359,17 @@ body {
 	-webkit-tap-highlight-color: transparent;
 }
 
-/* App.vue <style> 里加，不加 scoped */
+html,
+body,
+#app,
+.glass-inner,
+.right-container,
+.page {
+	-webkit-touch-callout: none !important;
+	-webkit-user-select: none !important;
+	user-select: none !important;
+	-webkit-user-drag: none;
+}
 
 /* ========== Safari 移动端点击优化 ========== */
 /* 消除 300ms 点击延迟，禁止双击缩放 */
@@ -690,7 +700,7 @@ html.sky-hit-test-repair .glass-inner * {
 	flex: 1;
 	overflow-y: auto;
 	overflow-x: hidden;
-	padding: 10px;
+	padding: 6px 10px;
 	position: relative;
 	left: auto;
 	top: auto;
