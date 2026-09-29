@@ -161,10 +161,6 @@
 		transition: 0.2s;
 	}
 
-	.set-card:hover {
-		background: rgba(255, 255, 255, 0.28);
-	}
-
 	.set-card text:first-child {
 		font-size: 16px;
 		width: 24px;

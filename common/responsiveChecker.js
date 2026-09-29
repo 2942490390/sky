@@ -24,12 +24,12 @@ export function startResponsiveCheck(callback) {
         const drift = now - lastHeartbeat - 1000
         lastHeartbeat = now
 
-        // 阈值 3000ms，连续 3 次才报警
+        // 阈值 3000ms，连续 2 次才报警
         if (drift > 3000) {
             consecutiveDrifts++
             console.warn('[responsive] 偏差', drift, 'ms，连续', consecutiveDrifts, '次')
 
-            if (consecutiveDrifts >= 3) {
+            if (consecutiveDrifts >= 2) {
                 consecutiveDrifts = 0
                 if (onUnresponsive) onUnresponsive('heartbeat', drift)
             }
@@ -38,28 +38,47 @@ export function startResponsiveCheck(callback) {
         }
     }, 1000)
 
+    // 添加多种事件监听方式以提高Safari兼容性
     document.addEventListener('click', onDocumentClick, true)
+    document.addEventListener('click', onDocumentClick, false)  // 同时捕获冒泡事件
+    document.addEventListener('touchstart', onDocumentClick, true) // 添加触摸事件支持
 }
 
-function onDocumentClick() {
+function onDocumentClick(event) {
     if (paused) return
+
+    // 记录点击时间
     const clickTime = performance.now()
     let frameFired = false
 
-    requestAnimationFrame(() => {
-        frameFired = true
-        const delay = performance.now() - clickTime
-        if (delay > 500) {
-            console.warn('[responsive] 点击到下一帧耗时', delay, 'ms')
-        }
-    })
+    // 尝试多种方法确保在Safari中也能检测到点击
+    try {
+        // 使用多种requestAnimationFrame调用方式确保兼容性
+        requestAnimationFrame(function() {
+            frameFired = true
+            const delay = performance.now() - clickTime
+            if (delay > 500) {
+                console.warn('[responsive] 点击到下一帧耗时', delay, 'ms')
+            }
+        })
 
+        // Safari兼容性处理：使用setTimeout作为备选方案
+        setTimeout(function() {
+            requestAnimationFrame(function() {
+                frameFired = true
+            })
+        }, 0)
+    } catch (e) {
+        console.warn('[responsive] requestAnimationFrame异常:', e)
+    }
+
+    // 增加检测超时时间，考虑到Safari的特殊性
     setTimeout(() => {
         if (!frameFired && !paused) {
-            console.warn('[responsive] 点击后 800ms rAF 未触发')
-            if (onUnresponsive) onUnresponsive('click', 800)
+            console.warn('[responsive] 点击后 1000ms rAF 未触发')
+            if (onUnresponsive) onUnresponsive('click', 1000)
         }
-    }, 800)
+    }, 1000)
 }
 
 export function pauseResponsiveCheck() {
@@ -77,7 +96,10 @@ export function stopResponsiveCheck() {
         clearInterval(heartbeatTimer)
         heartbeatTimer = null
     }
+    // 移除所有添加的事件监听器
     document.removeEventListener('click', onDocumentClick, true)
+    document.removeEventListener('click', onDocumentClick, false)
+    document.removeEventListener('touchstart', onDocumentClick, true)
     onUnresponsive = null
 }
 

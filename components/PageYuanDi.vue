@@ -5,54 +5,62 @@
 				<text class="fa-regular fa-calendar-check"></text>
 				<text>每日任务</text>
 			</view>
-			<button class="sky-btn" @click="mrrw()">执行</button>
+			<button class="sky-btn" @click="mrrw()" @touchstart="preventTouch">执行</button>
 		</view>
 		<view class="sky-task">
 			<view class="task-left">
 				<text class="fa-regular fa-map"></text>
 				<text>切图跑图</text>
 			</view>
-			<button class="sky-btn" @click="qtpt()">执行</button>
+			<button class="sky-btn" @click="qtpt()" @touchstart="preventTouch">执行</button>
 		</view>
 		<view class="sky-task">
 			<view class="task-left">
 				<text class="fa-solid fa-fire-flame-curved"></text>
 				<text>获取燃料</text>
 			</view>
-			<button class="sky-btn" @click="ydrl()">执行</button>
+			<button class="sky-btn" @click="ydrl()" @touchstart="preventTouch">执行</button>
 		</view>
 		<view class="sky-task">
 			<view class="task-left">
 				<text class="fa-solid fa-coins"></text>
 				<text>活动代币</text>
 			</view>
-			<button class="sky-btn" @click="hddb()">执行</button>
+			<button class="sky-btn" @click="hddb()" @touchstart="preventTouch">执行</button>
 		</view>
 		<view class="sky-task">
 			<view class="task-left">
 				<text class="fa-regular fa-flag"></text>
 				<text>原地赛道</text>
 			</view>
-			<button class="sky-btn" @click="ydxg()">执行</button>
+			<button class="sky-btn" @click="ydxg()" @touchstart="preventTouch">执行</button>
 		</view>
 		<view class="sky-task">
 			<view class="task-left">
 				<text class="fa-regular fa-feather"></text>
 				<text>原地光翼</text>
 			</view>
-			<button class="sky-btn" @click="ydgy()">执行</button>
+			<button class="sky-btn" @click="ydgy()" @touchstart="preventTouch">执行</button>
 		</view>
 		<view class="sky-task">
 			<view class="task-left">
 				<text class="fa-regular fa-spa"></text>
 				<text>季节任务</text>
 			</view>
-			<button class="sky-btn" @click="jjrw()">执行</button>
+			<button class="sky-btn" @click="jjrw()" @touchstart="preventTouch">执行</button>
 		</view>
 	</view>
 </template>
 
 <script setup>
+	// ===== iOS Safari 触摸事件处理 =====
+	let touchStartTime = 0
+
+	// 阻止默认触摸行为，避免Safari的默认行为干扰
+	function preventTouch(e) {
+		e.stopPropagation()
+	}
+
 	// ===== 原样保留的方法 =====
 	function mrrw() {
 		console.log('mrrw')

@@ -1,7 +1,7 @@
 <template>
 	<view class="left-area">
 		<view v-for="(item, index) in navItems" :key="index" class="sidebar-list"
-			:class="{ active: activeIndex === index }" @tap="emit('change', index)">
+			:class="{ active: activeIndex === index }" @click="emit('change', index)">
 			<text :class="item.icon"></text>
 			<text>{{ item.label }}</text>
 		</view>
@@ -48,18 +48,12 @@
 		{
 			icon: 'fa-solid fa-gear',
 			label: '设置'
-		}, // ← 新增
+		},
 
 	]
 </script>
 
 <style scoped>
-	/* 移动端不要用 hover */
-	@media (hover: hover) and (pointer: fine) {
-		.sidebar-list:hover {
-			background: rgba(255, 255, 255, .2);
-		}
-	}
 
 	/* 用 active 给触摸反馈 */
 	.sidebar-list:active {
@@ -105,12 +99,8 @@
 		-webkit-user-select: none
 	}
 
-	.sidebar-list:hover {
-		background: rgba(255, 255, 255, .2);
-	}
-
 	.sidebar-list.active {
-		background: #ADB5BD;
+		background: rgba(211,211,211,0.5);
 		border-color: white;
 	}
 </style>

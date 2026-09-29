@@ -111,8 +111,8 @@
 	.reload-icon {
 		position: absolute;
 		z-index: 99999;
-		top: 6px;
-		right: 3px;
+		top: 2px;
+		right: 1px;
 		color: #fff;
 		display: inline-block;
 		width: 20px;

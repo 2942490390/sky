@@ -1,5 +1,4 @@
 import App from './App'
-// import VConsole from 'vconsole'
 
 // #ifndef VUE3
 import Vue from 'vue'
@@ -42,22 +41,11 @@ const isPc = () => {
 }
 
 // #ifdef H5
-//如果不是生产环境并且不是pc设备那么就显示调试
-if (process.env.NODE_ENV != "prod" && !isPc()) {
-	import('vconsole').then(m => {
-		new m.default()
-	})
+if (process.env.NODE_ENV === 'development' && !isPc()) {
+    // 只在开发环境引入 vconsole，生产环境不打包
+    import('vconsole').then(m => {
+        new m.default()
+    })
 }
 
-
-// if (process.env.NODE_ENV === 'development') {
-//     // 只在开发环境引入 vconsole，生产环境不打包
-//     import('vconsole').then(m => {
-//         new m.default()
-//     })
-// }
-
-// import('vconsole').then(m => {
-//        new m.default()
-//    })
 // #endif
