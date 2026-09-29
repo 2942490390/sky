@@ -7,7 +7,7 @@
 					<text :class="map.icon"></text>
 					<text>{{ map.name }}</text>
 				</view>
-				<button class="sky-btn-toggle" @click="showSubMap(key)" @touchstart.stop>切换</button>
+				<button class="sky-btn-toggle" @click="showSubMap(key)" >切换</button>
 			</view>
 		</view>
 
@@ -18,7 +18,7 @@
 					<text class="fa-solid fa-arrow-left"></text>
 					<text>返回地图列表</text>
 				</view>
-				<button class="sky-btn sky-btn-back" @click="backToMainMap" @touchstart.stop>返回</button>
+				<button class="sky-btn sky-btn-back" @click="backToMainMap" >返回</button>
 			</view>
 
 			<view v-if="currentSubMap" id="subMapView">
@@ -33,7 +33,7 @@
 						<text class="fa-regular fa-circle-dot"></text>
 						<text>{{ spot.name }}</text>
 					</view>
-					<button class="sky-btn" style="padding:4px 14px;" @click="warp(spot.warpId)" @touchstart.stop>
+					<button class="sky-btn" style="padding:4px 14px;" @click="warp(spot.warpId)" >
 						传送
 					</button>
 				</view>

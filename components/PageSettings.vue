@@ -4,10 +4,10 @@
 		<view class="toolbar">
 			<text class="title">指针链配置</text>
 			<view class="tools">
-				<button class="mini-btn add" @click="addRow" @touchstart.stop>+ 新增</button>
-				<button class="mini-btn reset" @click="onReset" @touchstart.stop>恢复默认</button>
-				<button class="mini-btn copy" @click="onCopy" @touchstart.stop>复制JS</button>
-				<button class="mini-btn import" @click="openImport" @touchstart.stop>导入指针链</button>
+				<button class="mini-btn add" @click="addRow" >+ 新增</button>
+				<button class="mini-btn reset" @click="onReset" >恢复默认</button>
+				<button class="mini-btn copy" @click="onCopy" >复制JS</button>
+				<button class="mini-btn import" @click="openImport" >导入指针链</button>
 			</view>
 		</view>
 
@@ -23,8 +23,8 @@
 							<option v-for="(fk, i) in functionKeys" :key="fk.key" :value="i">{{ fk.label }} ({{ fk.key
 							}})</option>
 						</select>
-						<button class="mini-btn del" @click.stop="removeRow(idx)" @touchstart.stop>删除</button>
-						<button class="mini-btn paste" @click.stop="paste(idx)" @touchstart.stop>粘贴</button>
+						<button class="mini-btn del" @click.stop="removeRow(idx)" >删除</button>
+						<button class="mini-btn paste" @click.stop="paste(idx)" >粘贴</button>
 					</view>
 
 					<!-- 第二行：基址偏移 -->
@@ -41,7 +41,7 @@
 							<button class="mini-btn add-chain"
 								:class="{ 'is-disabled': item.chain.length >= MAX_CHAIN }"
 								:disabled="item.chain.length >= MAX_CHAIN" @click.stop="addChain(idx)"
-								@touchstart.stop>+ 加一级</button>
+								>+ 加一级</button>
 						</view>
 						<view class="chain-list">
 							<view v-for="(c, ci) in item.chain" :key="ci" class="chain-item">
@@ -49,7 +49,7 @@
 								<input class="chain-input" v-model="item.chain[ci]" placeholder="0xC48"
 									@focus="onInputFocus(idx)" />
 								<button v-if="item.chain.length > 1" class="mini-btn del-chain"
-									@click.stop="removeChain(idx, ci)" @touchstart.stop>×</button>
+									@click.stop="removeChain(idx, ci)" >×</button>
 							</view>
 						</view>
 					</view>
@@ -70,7 +70,7 @@
 
 		<!-- 底部保存按钮 -->
 		<view class="footer">
-			<button class="save-btn" @click="onSave" @touchstart.stop>保存配置</button>
+			<button class="save-btn" @click="onSave" >保存配置</button>
 		</view>
 
 		<!-- ========== 弹窗：选择要设定的功能 ========== -->
@@ -85,9 +85,9 @@
 					</view>
 				</scroll-view>
 				<view class="modal-footer">
-					<button class="mini-btn reset" @click="closeFuncPicker" @touchstart.stop>取消</button>
+					<button class="mini-btn reset" @click="closeFuncPicker" >取消</button>
 					<button class="mini-btn add" :disabled="!importTargetKey" @click="onFuncPicked"
-						@touchstart.stop>确定</button>
+						>确定</button>
 				</view>
 			</view>
 		</view>
@@ -107,8 +107,8 @@
 					:maxlength="512" />
 
 				<view class="paste-footer">
-					<button class="mini-btn reset" @click="closePaste" @touchstart.stop>取消</button>
-					<button class="mini-btn add" @click="confirmPaste" @touchstart.stop>确定</button>
+					<button class="mini-btn reset" @click="closePaste" >取消</button>
+					<button class="mini-btn add" @click="confirmPaste" >确定</button>
 				</view>
 			</view>
 		</view>

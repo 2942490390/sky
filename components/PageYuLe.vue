@@ -6,7 +6,7 @@
 				<text class="fa-regular fa-feather"></text>
 				<text>修改光翼</text>
 			</view>
-			<button class="sky-btn" @click="xgjr" @touchstart.stop>执行</button>
+			<button class="sky-btn" @click="xgjr" >执行</button>
 		</view>
 		<!-- 设置高度 -->
 		<view class="sky-task">
@@ -14,7 +14,7 @@
 				<text class="fa-regular fa-feather"></text>
 				<text>设置高度</text>
 			</view>
-			<button class="sky-btn" @click="inputGoldF32" @touchstart.stop>执行</button>
+			<button class="sky-btn" @click="inputGoldF32" >执行</button>
 		</view>
 		<!-- 能量盾（入口按钮，点击弹出面板） -->
 		<view class="sky-task">
@@ -22,7 +22,7 @@
 				<text class="fa-solid fa-shield"></text>
 				<text>能量护盾</text>
 			</view>
-			<button class="sky-btn" @click="openShieldPanel" @touchstart.stop>配置</button>
+			<button class="sky-btn" @click="openShieldPanel" >配置</button>
 		</view>
 		<!-- 无限道具 -->
 		<view class="sky-task">
