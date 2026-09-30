@@ -4,10 +4,10 @@
 		<view class="toolbar">
 			<text class="title">指针链配置</text>
 			<view class="tools">
-				<button class="mini-btn add" @click="addRow" >+ 新增</button>
-				<button class="mini-btn reset" @click="onReset" >恢复默认</button>
-				<button class="mini-btn copy" @click="onCopy" >复制JS</button>
-				<button class="mini-btn import" @click="openImport" >导入指针链</button>
+				<view class="mini-btn add" @click="addRow">+ 新增</view>
+				<view class="mini-btn reset" @click="onReset">恢复默认</view>
+				<view class="mini-btn copy" @click="onCopy">复制JS</view>
+				<view class="mini-btn import" @click="openImport">导入指针链</view>
 			</view>
 		</view>
 
@@ -15,7 +15,7 @@
 		<scroll-view class="list" scroll-y :scroll-top="scrollTop" :scroll-with-animation="true" @scroll="onScroll"
 			:style="{ height: listHeight + 'px' }">
 			<view ref="listContentRef" class="list-content">
-				<view v-for="(item, idx) in list" :key="idx" class="card"
+				<view v-for="(item, idx) in list" :key="item.id" class="card"
 					:class="{ 'card-active': idx === highlightIndex }">
 					<!-- 第一行：功能 key 选择 + 删除 -->
 					<view class="card-header">
@@ -23,8 +23,8 @@
 							<option v-for="(fk, i) in functionKeys" :key="fk.key" :value="i">{{ fk.label }} ({{ fk.key
 							}})</option>
 						</select>
-						<button class="mini-btn del" @click.stop="removeRow(idx)" >删除</button>
-						<button class="mini-btn paste" @click.stop="paste(idx)" >粘贴</button>
+						<view class="mini-btn del" @click.stop="removeRow(idx)">删除</view>
+						<view class="mini-btn paste" @click.stop="paste(idx)">粘贴</view>
 					</view>
 
 					<!-- 第二行：基址偏移 -->
@@ -38,18 +38,16 @@
 					<view class="chain-block">
 						<view class="chain-header">
 							<text class="row-label">偏移链 ({{ item.chain.length }}/{{ MAX_CHAIN }})</text>
-							<button class="mini-btn add-chain"
-								:class="{ 'is-disabled': item.chain.length >= MAX_CHAIN }"
-								:disabled="item.chain.length >= MAX_CHAIN" @click.stop="addChain(idx)"
-								>+ 加一级</button>
+							<view class="mini-btn add-chain" :class="{ 'is-disabled': item.chain.length >= MAX_CHAIN }"
+								@click.stop="item.chain.length >= MAX_CHAIN ? null : addChain(idx)">+ 加一级</view>
 						</view>
 						<view class="chain-list">
-							<view v-for="(c, ci) in item.chain" :key="ci" class="chain-item">
+							<view v-for="(c, ci) in item.chain" :key="c.id" class="chain-item">
 								<text class="chain-idx">[{{ ci }}]</text>
-								<input class="chain-input" v-model="item.chain[ci]" placeholder="0xC48"
+								<input class="chain-input" v-model="c.val" placeholder="0xC48"
 									@focus="onInputFocus(idx)" />
-								<button v-if="item.chain.length > 1" class="mini-btn del-chain"
-									@click.stop="removeChain(idx, ci)" >×</button>
+								<view v-if="item.chain.length > 1" class="mini-btn del-chain"
+									@click.stop="removeChain(idx, c.id)">×</view>
 							</view>
 						</view>
 					</view>
@@ -70,7 +68,7 @@
 
 		<!-- 底部保存按钮 -->
 		<view class="footer">
-			<button class="save-btn" @click="onSave" >保存配置</button>
+			<view class="save-btn" @click="onSave">保存配置</view>
 		</view>
 
 		<!-- ========== 弹窗：选择要设定的功能 ========== -->
@@ -85,9 +83,9 @@
 					</view>
 				</scroll-view>
 				<view class="modal-footer">
-					<button class="mini-btn reset" @click="closeFuncPicker" >取消</button>
-					<button class="mini-btn add" :disabled="!importTargetKey" @click="onFuncPicked"
-						>确定</button>
+					<view class="mini-btn reset" @click="closeFuncPicker">取消</view>
+					<view class="mini-btn add" :class="{ 'is-disabled': !importTargetKey }"
+						@click="importTargetKey && onFuncPicked()">确定</view>
 				</view>
 			</view>
 		</view>
@@ -98,7 +96,7 @@
 				<view class="modal-title">粘贴指针链</view>
 
 				<view class="paste-hint">
-					<text>支持格式：</text>
+					<text>支持格式（单条）：</text>
 					<text class="paste-hint-code">Sky-iOS-Gold+0x529E8D0+0x1300+0x6C44</text>
 					<text class="paste-hint-code">[Sky-iOS-Gold+0x4885C30]+0x108+0x4A24</text>
 				</view>
@@ -107,8 +105,8 @@
 					:maxlength="512" />
 
 				<view class="paste-footer">
-					<button class="mini-btn reset" @click="closePaste" >取消</button>
-					<button class="mini-btn add" @click="confirmPaste" >确定</button>
+					<view class="mini-btn reset" @click="closePaste">取消</view>
+					<view class="mini-btn add" @click="confirmPaste">确定</view>
 				</view>
 			</view>
 		</view>
@@ -136,6 +134,23 @@ let observer = null
 let focusScrollTimer = null
 let scrollFinalizeTimer = null
 let scrollRequestId = 0
+
+// ===== 唯一 id 生成器 =====
+let _uid = 0
+const genId = () => ++_uid
+
+function makeChain(val = '0x0') {
+	return { id: genId(), val }
+}
+
+function makeCard(key = '') {
+	return {
+		id: genId(),
+		key: key || functionKeys[0].key,
+		base: '0x0',
+		chain: [makeChain()]
+	}
+}
 
 // ===== 导入相关状态 =====
 const showFuncPicker = ref(false)
@@ -252,20 +267,15 @@ function onInputFocus(idx) {
 	focusScrollTimer = setTimeout(restore, 200)
 }
 
-
-
 /**
  * 解析粘贴的指针链文本
  * 支持：
  *   Sky-iOS-Gold+0x529E8D0+0x1300+0x6C44
  *   [Sky-iOS-Gold+0x4885C30]+0x108+0x4A24
- * @param {string} text
- * @returns {{ base: string, chain: string[] } | null}
  */
 function parsePastedChain(text) {
 	if (typeof text !== 'string') return null
 
-	// ★ 去掉首尾空白，去掉所有 [ ]
 	let s = text.trim().replace(/[\[\]]/g, '').trim()
 	if (!s) return null
 
@@ -292,13 +302,13 @@ function parsePastedChain(text) {
 
 	return { base, chain }
 }
+
 // ===== 粘贴弹窗状态 =====
 const pasteVisible = ref(false)
 const pasteInput = ref('')
 const pasteTargetIndex = ref(-1)
 
 async function paste(idx) {
-	// 用自建弹窗，可控性强
 	pasteTargetIndex.value = idx
 	pasteInput.value = ''
 	pasteVisible.value = true
@@ -327,9 +337,9 @@ async function confirmPaste() {
 		return
 	}
 
-	// 写入列表
+	// 写入列表（chain 转成 { id, val }）
 	list.value[idx].base = parsed.base
-	list.value[idx].chain = parsed.chain
+	list.value[idx].chain = parsed.chain.map(v => makeChain(v))
 
 	// 高亮提示
 	highlightIndex.value = idx
@@ -345,7 +355,6 @@ async function confirmPaste() {
 		duration: 1000
 	})
 
-	// 滚到该卡片
 	await nextTick()
 	await scrollToIndex(idx)
 }
@@ -404,9 +413,10 @@ function loadToList() {
 	for (const key in offsets) {
 		const [base, chain] = offsets[key]
 		arr.push({
+			id: genId(),
 			key,
 			base: '0x' + Number(base).toString(16).toUpperCase(),
-			chain: chain.map(n => '0x' + Number(n).toString(16).toUpperCase())
+			chain: chain.map(n => makeChain('0x' + Number(n).toString(16).toUpperCase()))
 		})
 	}
 	list.value = arr
@@ -455,11 +465,7 @@ function getKeyLabel(key) {
 }
 
 async function addRow() {
-	list.value.push({
-		key: functionKeys[0].key,
-		base: '0x0',
-		chain: ['0x0']
-	})
+	list.value.push(makeCard())
 }
 
 function removeRow(idx) {
@@ -487,20 +493,26 @@ async function addChain(idx) {
 		return
 	}
 
-	item.chain.push('0x0')
+	item.chain.push(makeChain())
 	await nextTick()
 	await new Promise(resolve => setTimeout(resolve, 30))
 	await scrollToIndex(idx)
 }
 
-async function removeChain(idx, ci) {
-	list.value[idx].chain.splice(ci, 1)
+// ★ 按 chainId 删除，天然幂等：找不到就 no-op
+async function removeChain(idx, chainId) {
+	const item = list.value[idx]
+	if (!item) return
+	const i = item.chain.findIndex(c => c.id === chainId)
+	if (i === -1) return
+	if (item.chain.length <= 1) return
+	item.chain.splice(i, 1)
 	await nextTick()
 	await scrollToIndex(idx)
 }
 
 function formatPreview(item) {
-	const chainStr = item.chain.join(', ')
+	const chainStr = item.chain.map(c => c.val).join(', ')
 	return `[${item.base}, [${chainStr}]]`
 }
 
@@ -522,7 +534,7 @@ function onSave() {
 	const offsets = {}
 	for (const item of list.value) {
 		const base = parseInt(item.base, 16)
-		const chain = item.chain.map(s => parseInt(s, 16)).filter(n => !isNaN(n))
+		const chain = item.chain.map(c => parseInt(c.val, 16)).filter(n => !isNaN(n))
 		if (isNaN(base)) {
 			uni.showToast({ title: `基址 ${item.base} 无效`, icon: 'none' })
 			return
@@ -750,12 +762,12 @@ async function applyChainToTarget(c) {
 
 	let idx = list.value.findIndex(it => it.key === key)
 	if (idx === -1) {
-		list.value.push({ key, base: '0x0', chain: ['0x0'] })
+		list.value.push(makeCard(key))
 		idx = list.value.length - 1
 	}
 
 	list.value[idx].base = c.baseHex
-	list.value[idx].chain = c.offsetHexes.slice()
+	list.value[idx].chain = c.offsetHexes.map(v => makeChain(v))
 
 	highlightIndex.value = idx
 	setTimeout(() => {
@@ -771,7 +783,7 @@ async function applyChainToTarget(c) {
 		const offsets = {}
 		for (const item of list.value) {
 			const base = parseInt(item.base, 16)
-			const chain = item.chain.map(s => parseInt(s, 16)).filter(n => !isNaN(n))
+			const chain = item.chain.map(c => parseInt(c.val, 16)).filter(n => !isNaN(n))
 			if (isNaN(base)) continue
 			offsets[item.key] = [base, chain]
 		}
@@ -888,7 +900,7 @@ async function applyChainToTarget(c) {
 	align-items: center;
 	gap: 8px;
 	margin-bottom: 6px;
-	height: 20px;
+	height: 30px;
 }
 
 .row-label {
@@ -948,7 +960,7 @@ async function applyChainToTarget(c) {
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	height: 20px;
+	height: 30px;
 }
 
 .chain-input {
@@ -961,7 +973,6 @@ async function applyChainToTarget(c) {
 	height: 100%;
 	min-height: 0;
 	box-sizing: border-box;
-	line-height: 20px;
 }
 
 .chain-idx {
@@ -970,7 +981,6 @@ async function applyChainToTarget(c) {
 	color: #ff3b30;
 	font-size: 11px;
 	font-family: monospace;
-	line-height: 20px;
 	display: flex;
 	align-items: center;
 }
@@ -979,7 +989,6 @@ async function applyChainToTarget(c) {
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	padding: 4px 8px;
 	background: rgba(0, 0, 0, 0.06);
 	border-radius: 6px;
 	margin-top: 4px;
@@ -1052,13 +1061,11 @@ async function applyChainToTarget(c) {
 .mini-btn.add-chain {
 	background: #007aff;
 	color: #fff;
-	padding: 4px 8px;
 }
 
 .mini-btn.del-chain {
 	background: #ff3b30;
 	color: #fff;
-	padding: 4px 8px;
 }
 
 .footer {
@@ -1094,7 +1101,7 @@ async function applyChainToTarget(c) {
 	background: rgba(0, 0, 0, 0.45);
 	height: 100vh;
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: center;
 	z-index: 9999;
 }
@@ -1153,7 +1160,7 @@ async function applyChainToTarget(c) {
 .paste-box {
 	width: 88%;
 	max-width: 600px;
-	padding: 12px;
+	padding: 6px;
 	gap: 10px;
 }
 
@@ -1188,15 +1195,9 @@ async function applyChainToTarget(c) {
 	color: #1e2a2e;
 }
 
-.modal-footer {
-	display: flex;
-	justify-content: flex-end;
-	gap: 8px;
-}
-
 .paste-footer {
 	display: flex;
 	justify-content: flex-end;
-	gap: 8px;
+	gap: 4px;
 }
 </style>

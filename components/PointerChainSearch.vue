@@ -573,10 +573,16 @@ onUnmounted(() => {
 	/* gap: 6px; */
 	align-items: center;
 	margin-bottom: 4px;
+	height: 30px;
+	line-height: 30px;
 }
 
 .row:last-child {
 	margin-bottom: 4px;
+}
+
+.row input {
+	height: 100%;
 }
 
 label {
