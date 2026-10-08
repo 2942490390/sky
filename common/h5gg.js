@@ -7,14 +7,14 @@ if (typeof h5gg === 'undefined') {
 	globalThis.h5gg = {
 		getRangesList: () => [],
 		getValue: () => 0,
-		setValue: () => {},
-		clearResults: () => {},
-		searchNumber: () => {},
-		searchNearby: () => {},
-		editAll: () => {},
+		setValue: () => { },
+		clearResults: () => { },
+		searchNumber: () => { },
+		searchNearby: () => { },
+		editAll: () => { },
 		getResults: () => [],
 		getResultsCount: () => 0,
-		require: () => {}
+		require: () => { }
 	}
 	uni.showToast({
 		icon: 'none',
@@ -548,7 +548,7 @@ async function findCandleBaseAddrs() {
 
 	try {
 		h5gg.clearResults();
-	} catch (e) {}
+	} catch (e) { }
 	try {
 		h5gg.searchNumber('1808480955', 'I32', '0x130000000', '0x180000000');
 	} catch (e) {
@@ -666,13 +666,74 @@ export async function setGoldF32(value) {
 	return writeSafe(addr, v, 'F32')
 }
 
-// ================= 高危炸翼（I32） =================
-export async function setWingBurst(value) {
+// ================= 高危炸翼（I32，循环写入） =================
+let wingBurstTimer = null
+let wingBurstAddr = null
+let wingBurstValue = 0
+
+/**
+ * 循环写入炸翼值
+ * @param {boolean} checked 是否开启
+ * @param {number} value 要写入的 I32 值
+ * @param {number} interval 写入间隔 ms，默认 50
+ */
+export async function wingBurstLoop(checked, value, interval = 50) {
+	// 先清旧定时器
+	if (wingBurstTimer) {
+		clearTimeout(wingBurstTimer)
+		wingBurstTimer = null
+	}
+
+	if (!checked) {
+		// 关闭：还原为 0
+		if (wingBurstAddr) {
+			writeSafe(wingBurstAddr, 0, 'I32')
+		}
+		wingBurstValue = 0
+		return
+	}
+
+	// 缓存值
 	const v = Number(value)
-	if (!Number.isFinite(v)) return false
-	const addr = await getPtr('zy')
-	if (!addr || addr <= 0) return false
-	return writeSafe(addr, v, 'I32')
+	if (!Number.isFinite(v)) return
+	wingBurstValue = v
+
+	// 未拿过地址 → 搜索一次
+	if (!wingBurstAddr) {
+		wingBurstAddr = await getPtr('zy')
+		uni.showToast({
+			icon: 'none',
+			title: wingBurstAddr ? '0x' + wingBurstAddr.toString(16) : '未找到'
+		})
+	}
+	if (!wingBurstAddr) return
+
+	// 写一次
+	writeSafe(wingBurstAddr, wingBurstValue, 'I32')
+	// 循环
+	wingBurstTimer = setTimeout(() => wingBurstLoop(true, wingBurstValue, interval), interval)
+}
+
+/**
+ * 停止炸翼循环
+ */
+export function stopWingBurstLoop() {
+	if (wingBurstTimer) {
+		clearTimeout(wingBurstTimer)
+		wingBurstTimer = null
+	}
+	if (wingBurstAddr) {
+		writeSafe(wingBurstAddr, 0, 'I32')
+	}
+	// ★ 不清 wingBurstAddr，保留缓存
+	wingBurstValue = 0
+}
+
+/**
+ * 清除炸翼地址缓存
+ */
+export function clearWingBurstAddr() {
+	wingBurstAddr = null
 }
 
 
