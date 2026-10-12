@@ -740,7 +740,82 @@ export function clearWingBurstAddr() {
 
 
 
+// ================= 大跳（滑块版） =================
+let bigJumpAddr = null
+let bigJumpTimer = null
+let currentBigJump = 0
 
+/**
+ * 设置大跳值（滑块变化时调用）
+ * @param {number} value 大跳倍率/数值
+ */
+export async function setBigJump(value) {
+	const v = Number(value)
+	if (!Number.isFinite(v)) return false
+
+	currentBigJump = v
+
+	if (!bigJumpAddr) {
+		bigJumpAddr = await getPtr('bigjump')
+		uni.showToast({
+			icon: 'none',
+			title: bigJumpAddr ? '0x' + bigJumpAddr.toString(16) : '未找到'
+		})
+	}
+	if (!bigJumpAddr) return false
+
+	return writeSafe(bigJumpAddr, v, 'F32')
+}
+
+/**
+ * 大跳循环写入（可选，防止被游戏重置）
+ * @param {boolean} enabled
+ * @param {number} value
+ */
+export async function bigJumpLoop(enabled, value) {
+	if (bigJumpTimer) {
+		clearTimeout(bigJumpTimer)
+		bigJumpTimer = null
+	}
+	if (!enabled) return
+
+	const v = Number(value)
+	if (Number.isFinite(v)) currentBigJump = v
+
+	if (!bigJumpAddr) {
+		bigJumpAddr = await getPtr('bigjump')
+		uni.showToast({
+			icon: 'none',
+			title: bigJumpAddr ? '0x' + bigJumpAddr.toString(16) : '未找到'
+		})
+	}
+	if (!bigJumpAddr) return
+
+	writeSafe(bigJumpAddr, currentBigJump, 'F32')
+	bigJumpTimer = setTimeout(() => bigJumpLoop(true, currentBigJump), 100)
+}
+
+/**
+ * 停止大跳循环，并还原为 0
+ */
+export function stopBigJumpLoop() {
+	if (bigJumpTimer) {
+		clearTimeout(bigJumpTimer)
+		bigJumpTimer = null
+	}
+	if (bigJumpAddr) {
+		writeSafe(bigJumpAddr, 0, 'F32')
+	}
+	// 保留 bigJumpAddr 缓存，下次直接用
+	currentBigJump = 0
+}
+
+/**
+ * 清除大跳地址缓存
+ */
+export function clearBigJumpAddr() {
+	bigJumpAddr = null
+}
 
 
 
@@ -752,4 +827,5 @@ export function clearAllAddrCache() {
 	bloomAddr = null
 	fireworkAddr = null
 	candleBaseAddrs = null
+	bigJumpAddr = null
 }

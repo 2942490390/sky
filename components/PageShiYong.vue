@@ -21,6 +21,19 @@
 			<button class="sky-btn" @tap="toggleAutoRun">{{ autoRunLabel }}</button>
 			<button class="sky-btn stop" @tap="stopAutoRun">停止跑图</button>
 		</view>
+		<!-- 全局加速 -->
+		<view class="sky-task sky-task-block">
+			<view class="task-left">
+				<text class="fa-solid fa-gauge-high"></text>
+				<text>全局加速</text>
+			</view>
+			<view class="slider-wrap">
+				<slider class="speed-slider" :value="speedValue" @changing="onSpeedChanging" @change="onSpeedChange"
+					min="1" max="10" step="0.1" activeColor="#FFD966" backgroundColor="rgba(0,0,0,0.15)"
+					block-color="#FFF9E8" block-size="18" />
+				<text class="speed-label">{{ speedValue.toFixed(1) }}x</text>
+			</view>
+		</view>
 
 		<!-- 无限能量 -->
 		<view class="sky-task">
@@ -67,20 +80,6 @@
 			<button class="sky-btn" @tap="toggleLockHeight">
 				{{ lockHeightLabel }}
 			</button>
-		</view>
-
-		<!-- 全局加速 -->
-		<view class="sky-task sky-task-block">
-			<view class="task-left">
-				<text class="fa-solid fa-gauge-high"></text>
-				<text>全局加速</text>
-			</view>
-			<view class="slider-wrap">
-				<slider class="speed-slider" :value="speedValue" @changing="onSpeedChanging" @change="onSpeedChange"
-					min="1" max="10" step="0.1" activeColor="#FFD966" backgroundColor="rgba(0,0,0,0.15)"
-					block-color="#FFF9E8" block-size="18" />
-				<text class="speed-label">{{ speedValue.toFixed(1) }}x</text>
-			</view>
 		</view>
 	</view>
 </template>

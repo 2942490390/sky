@@ -60,6 +60,20 @@
 			<switch :checked="swState.zhayi" color="#FFD966" style="transform: scale(0.75);" @change="zhayi" />
 		</view>
 
+		<!-- 大跳 -->
+		<view class="sky-task sky-task-block">
+			<view class="task-left">
+				<text class="fa-solid fa-person-running"></text>
+				<text>角色大跳</text>
+			</view>
+			<view class="slider-wrap">
+				<slider class="speed-slider" :value="bigJumpValue" @changing="onBigJumpChanging"
+					@change="onBigJumpChange" min="1" max="20" step="0.1" activeColor="#FFD966"
+					backgroundColor="rgba(0,0,0,0.15)" block-color="#FFF9E8" block-size="18" />
+				<text class="speed-label">{{ bigJumpValue.toFixed(1) }}</text>
+			</view>
+		</view>
+
 		<!-- ============ 能量盾弹窗 ============ -->
 		<view v-if="shieldVisible" class="shield-mask" @click="closeShieldPanel">
 			<view class="shield-panel" @click.stop>
@@ -258,9 +272,12 @@ import {
 	stopFireworkLoop,
 	setWingCount,
 	setGoldF32,
-	wingBurstLoop,        // ★ 替换 setWingBurst
-	stopWingBurstLoop,    // ★ 新增
-	clearWingBurstAddr    // ★ 新增（可选）
+	wingBurstLoop,
+	stopWingBurstLoop,
+	clearWingBurstAddr,
+	setBigJump,
+	stopBigJumpLoop,
+	clearBigJumpAddr
 } from '../common/h5gg.js'
 
 import {
@@ -593,11 +610,31 @@ function wxyh(e) {
 	fireworkLoop(checked)
 }
 
+// ===== 大跳 =====
+const bigJumpValue = ref(1)
+
+function onBigJumpChanging(e) {
+	bigJumpValue.value = e.detail.value
+}
+
+async function onBigJumpChange(e) {
+	bigJumpValue.value = e.detail.value
+	const v = parseFloat(bigJumpValue.value)
+	if (v > 1) {
+		await setBigJump(v)
+	} else {
+		stopBigJumpLoop()
+	}
+}
+
 onUnmounted(() => {
 	stopFireworkLoop()
 	stopAllEnergyShield()
-	stopWingBurstLoop()   // ★ 新增
+	stopWingBurstLoop()
 	resetMagic()
+	clearWingBurstAddr()
+	stopBigJumpLoop()
+	clearBigJumpAddr()
 })
 </script>
 

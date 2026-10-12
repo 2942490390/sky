@@ -13,7 +13,8 @@ export const FUNCTION_LABELS = {
 	lzaddr: '蜡烛地址',
 	zhuahua: '炸花地址',
 	wxyh: '无限烟花',
-	wxmf: '无限魔法'
+	wxmf: '无限魔法',
+	bigjump: '大跳'
 }
 
 /**
