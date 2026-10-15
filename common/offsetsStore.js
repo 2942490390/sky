@@ -56,9 +56,36 @@ function getDefaultOffsets() {
 	const parsed = parseOffsets(OFFSETS_CONFIG)
 	if (parsed) {
 		_defaultOffsets = parsed
-		// console.log('[offsetsStore] 使用 offsets.config.js 配置')
 	}
 	return _defaultOffsets
+}
+
+// ============================================================
+// ★ 深比较两个 offsets 对象是否完全一致
+//    key 集合一致 + 每个 key 的 base 一致 + chain 数组逐项一致
+// ============================================================
+function isSameOffsets(a, b) {
+	if (!a || !b) return false
+
+	const ka = Object.keys(a)
+	const kb = Object.keys(b)
+	if (ka.length !== kb.length) return false
+
+	for (const k of ka) {
+		if (!b[k]) return false
+
+		const [baseA, chainA] = a[k]
+		const [baseB, chainB] = b[k]
+
+		if (Number(baseA) !== Number(baseB)) return false
+		if (!Array.isArray(chainA) || !Array.isArray(chainB)) return false
+		if (chainA.length !== chainB.length) return false
+
+		for (let i = 0; i < chainA.length; i++) {
+			if (Number(chainA[i]) !== Number(chainB[i])) return false
+		}
+	}
+	return true
 }
 
 // ============================================================
@@ -76,19 +103,45 @@ export function getKeyOptions() {
 	}))
 }
 
+// ★ 核心：JS 配置永远权威，缓存只是镜像
 export function loadOffsets() {
+	const def = getDefaultOffsets()
+
 	try {
 		const raw = uni.getStorageSync(STORAGE_KEY)
-		if (raw) {
-			const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
-			if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-				return parsed
-			}
+
+		// 1. 本地没有缓存 → 用 JS 配置，并写入缓存
+		if (!raw) {
+			console.log('[offsetsStore] 无缓存，使用 JS 配置并写入缓存')
+			uni.setStorageSync(STORAGE_KEY, JSON.stringify(def))
+			return def
 		}
+
+		const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+
+		// 缓存非法 → 当作没有缓存
+		if (!parsed || typeof parsed !== 'object' || Object.keys(parsed).length === 0) {
+			console.log('[offsetsStore] 缓存非法，使用 JS 配置并覆盖缓存')
+			uni.setStorageSync(STORAGE_KEY, JSON.stringify(def))
+			return def
+		}
+
+		// 2. 缓存存在 → 和 JS 比对
+		if (isSameOffsets(parsed, def)) {
+			// 一致，直接用缓存（其实和 JS 一样）
+			return parsed
+		}
+
+		// 3. 不一致 → 用 JS 的，并覆盖缓存
+		console.log('[offsetsStore] 缓存与 JS 不一致，使用 JS 配置并覆盖缓存')
+		uni.setStorageSync(STORAGE_KEY, JSON.stringify(def))
+		return def
+
 	} catch (e) {
-		console.warn('[offsetsStore] loadOffsets 失败', e)
+		console.warn('[offsetsStore] loadOffsets 失败，回退到 JS 配置', e)
+		// 出错也保证返回 JS 配置
+		return def
 	}
-	return getDefaultOffsets()
 }
 
 export function saveOffsets(offsets) {
