@@ -218,19 +218,24 @@
 						<button class="quick-btn danger" @click="quickCloseAllMagic">全部关闭</button>
 					</view>
 
-					<!-- 8 槽列表 -->
-					<view class="magic-list">
+					<!-- 8 槽图标网格 -->
+					<scroll-view class="magic-scroll" scroll-y>
 						<template v-for="slot in 8" :key="'slot' + slot">
 							<view class="magic-group">{{ magicSlotTitles[slot - 1] }}</view>
-							<view v-for="(item, idx) in magicItems[slot]" :key="slot + '_' + idx" class="magic-row">
-								<text class="magic-name">{{ item.name }}</text>
-								<text class="magic-id">{{ item.id }}</text>
-								<view class="magic-sw" :class="{ on: magicState[slot] === item.id }"
-									@click="toggleMagicSlot(slot, item)"></view>
+							<view class="magic-grid">
+								<view v-for="(item, idx) in magicItems[slot]" :key="slot + '_' + idx" class="magic-cell"
+									:class="{ on: magicState[slot] === item.id }" @click="toggleMagicSlot(slot, item)">
+									<view class="magic-icon">
+										<text class="fa-solid fa-wand-magic-sparkles"></text>
+									</view>
+									<text class="magic-cell-name">{{ item.name }}</text>
+								</view>
 							</view>
 						</template>
-					</view>
+					</scroll-view>
 				</view>
+
+
 
 				<!-- ========== 地址页 ========== -->
 				<view v-show="magicTab === 'addr'" class="shield-body dev-body">
@@ -302,9 +307,15 @@ import {
 	getSlotState,
 	getMagicAddrList,
 	getMagicCountAddr,
-	fmtAddr as fmtMagicAddr,   // 避免和能量盾的 fmtAddr 冲突，重命名
+	fmtAddr as fmtMagicAddr,
 	resetMagic
 } from '../common/magic.js'
+
+// ★ 新增：从 magicData.js 导入数据
+import {
+	MAGIC_SLOT_TITLES,
+	MAGIC_ITEMS
+} from '../common/magicData.js'
 
 // ===== 开关状态 =====
 const swState = reactive({
@@ -330,11 +341,14 @@ const magicState = reactive({
 const magicCountAddr = ref(null)
 const magicAddrList = ref([])
 
-const magicSlotTitles = [
-	'槽1 · 背饰', '槽2 · 发型', '槽3 · 斗篷', '槽4 · 裤子',
-	'槽5 · 鞋子', '槽6 · 面具', '槽7 · 效果', '槽8 · 拖尾'
-]
+const magicSlotTitles = MAGIC_SLOT_TITLES
+const magicItems = MAGIC_ITEMS
+// const magicSlotTitles = [
+// 	'槽1 · 背饰', '槽2 · 发型', '槽3 · 斗篷', '槽4 · 裤子',
+// 	'槽5 · 鞋子', '槽6 · 面具', '槽7 · 效果', '槽8 · 拖尾'
+// ]
 
+/*
 const magicItems = {
 	1: [
 		{ name: '情人节烟花棒', id: 1403584133 },
@@ -383,6 +397,7 @@ const magicItems = {
 		{ name: '紫色拖尾', id: -1071076330 }
 	]
 }
+*/
 
 // ===== 魔法：刷新状态 =====
 function refreshMagicState() {
@@ -949,57 +964,96 @@ onUnmounted(() => {
 	background: #636366;
 }
 
-/* ===== 魔法列表 ===== */
-.magic-list {
+/* ===== 魔法图标网格 ===== */
+.magic-scroll {
 	flex: 1;
 	overflow-y: auto;
 	padding: 4px 10px 10px;
+	min-height: 0;
 }
 
 .magic-group {
 	font-size: 12px;
 	font-weight: 700;
 	color: #409EFF;
-	padding: 6px 0 4px;
+	/* padding: 6px 0 4px; */
 	border-bottom: 2px solid rgba(64, 158, 255, 0.3);
-	margin: 8px 0 6px;
+	/* margin: 8px 0 6px; */
 }
 
 .magic-group:first-child {
 	margin-top: 0;
 }
 
-.magic-row {
+/* 网格：自动填充，每列最小 64px */
+.magic-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+	gap: 4px;
+	padding: 4px 0 8px;
+}
+
+/* 单个图标单元 */
+.magic-cell {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	padding: 6px 0px;
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.55);
+	border: 1px solid rgba(0, 0, 0, 0.06);
+	cursor: pointer;
+	transition: all 0.15s;
+	user-select: none;
+}
+
+.magic-cell:active {
+	transform: scale(0.96);
+}
+
+/* 开启高亮 */
+.magic-cell.on {
+	background: rgba(52, 199, 89, 0.18);
+	border-color: #34c759;
+	box-shadow: 0 0 8px rgba(52, 199, 89, 0.45);
+}
+
+/* 图标圆形底 */
+.magic-icon {
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: rgba(189, 199, 208, 0.7);
 	display: flex;
 	align-items: center;
-	padding: 5px 8px;
-	background: rgba(255, 255, 255, 0.5);
-	border-radius: 6px;
-	margin-bottom: 4px;
+	justify-content: center;
+	color: #fff;
+	font-size: 16px;
+	transition: background 0.15s;
 }
 
-.magic-name {
-	flex: 1;
-	font-size: 12px;
-	font-weight: 500;
-	color: #333;
+.magic-cell.on .magic-icon {
+	background: #34c759;
+	box-shadow: 0 0 10px rgba(52, 199, 89, 0.7);
 }
 
-.magic-id {
+/* 名称 */
+.magic-cell-name {
 	font-size: 10px;
-	font-family: monospace;
-	color: #999;
-	margin: 0 8px;
+	color: #333;
+	text-align: center;
+	line-height: 1.2;
+	max-width: 64px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-.magic-sw {
-	width: 38px;
-	height: 20px;
-	border-radius: 10px;
-	background: #ccc;
-	position: relative;
-	flex-shrink: 0;
-	transition: background 0.2s;
+.magic-cell.on .magic-cell-name {
+	color: #1a7a35;
+	font-weight: 600;
 }
 
 .magic-sw.on {
