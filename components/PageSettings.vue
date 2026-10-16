@@ -626,6 +626,8 @@ function onReset() {
 		success: (res) => {
 			if (res.confirm) {
 				resetOffsets()
+				clearOffsets()
+				clearAllAddrCache()
 				loadToList()
 				uni.showToast({ title: '已恢复默认', icon: 'success' })
 			}
@@ -844,23 +846,16 @@ async function applyChainToTarget(c) {
 
 	await scrollToIndex(idx)
 
+	// ★ 只清内存缓存，不写本地
 	clearOffsets()
 	clearAllAddrCache()
 
-	try {
-		const offsets = {}
-		for (const item of list.value) {
-			const base = parseInt(item.base, 16)
-			const chain = item.chain.map(c => parseInt(c.val, 16)).filter(n => !isNaN(n))
-			if (isNaN(base)) continue
-			offsets[item.key] = [base, chain]
-		}
-		if (saveOffsets(offsets)) {
-			console.log('[applyChainToTarget] 自动保存成功')
-		}
-	} catch (e) {
-		console.warn('[applyChainToTarget] 自动保存失败', e)
-	}
+	// ★ 提示用户手动保存
+	uni.showToast({
+		icon: 'none',
+		title: '已导入，请点「保存配置」生效',
+		duration: 2000
+	})
 }
 </script>
 

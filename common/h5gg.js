@@ -796,15 +796,12 @@ export async function bigJumpLoop(enabled, value) {
 }
 
 /**
- * 停止大跳循环，并还原为 0
+ * 停止大跳循环
  */
 export function stopBigJumpLoop() {
 	if (bigJumpTimer) {
 		clearTimeout(bigJumpTimer)
 		bigJumpTimer = null
-	}
-	if (bigJumpAddr) {
-		writeSafe(bigJumpAddr, 0, 'F32')
 	}
 	// 保留 bigJumpAddr 缓存，下次直接用
 	currentBigJump = 0

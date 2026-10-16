@@ -101,7 +101,7 @@ function getStoredHash() {
 function setStoredHash(hash) {
 	try {
 		uni.setStorageSync(HASH_KEY, hash)
-	} catch (e) {}
+	} catch (e) { }
 }
 
 // ============================================================
@@ -154,12 +154,11 @@ export function saveOffsets(offsets) {
 }
 
 /**
- * 恢复默认 → 相当于用户点了保存默认配置
+ * 恢复默认 → 清空本地缓存，回到"无缓存"状态（用 JS 配置）
  */
 export function resetOffsets() {
-	const def = getDefaultOffsets()
-	saveOffsets(def)
-	return def
+	clearCache()
+	return getDefaultOffsets()
 }
 
 /**
@@ -169,7 +168,7 @@ export function clearCache() {
 	try {
 		uni.removeStorageSync(STORAGE_KEY)
 		uni.removeStorageSync(HASH_KEY)
-	} catch (e) {}
+	} catch (e) { }
 }
 
 /**
