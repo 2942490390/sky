@@ -21,46 +21,46 @@ function getScreenSize() {
 					sh = s.height
 				}
 			}
-		} catch (e) {}
+		} catch (e) { }
 	}
 
 	if (!sw || !sh || sw === sh) {
 		const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 3
 		const MODELS = [{
-				dpr: 3,
-				w: 430,
-				h: 932
-			},
-			{
-				dpr: 3,
-				w: 393,
-				h: 852
-			},
-			{
-				dpr: 3,
-				w: 390,
-				h: 844
-			},
-			{
-				dpr: 3,
-				w: 428,
-				h: 926
-			},
-			{
-				dpr: 2,
-				w: 414,
-				h: 896
-			},
-			{
-				dpr: 2,
-				w: 375,
-				h: 667
-			},
-			{
-				dpr: 2,
-				w: 320,
-				h: 568
-			}
+			dpr: 3,
+			w: 430,
+			h: 932
+		},
+		{
+			dpr: 3,
+			w: 393,
+			h: 852
+		},
+		{
+			dpr: 3,
+			w: 390,
+			h: 844
+		},
+		{
+			dpr: 3,
+			w: 428,
+			h: 926
+		},
+		{
+			dpr: 2,
+			w: 414,
+			h: 896
+		},
+		{
+			dpr: 2,
+			w: 375,
+			h: 667
+		},
+		{
+			dpr: 2,
+			w: 320,
+			h: 568
+		}
 		]
 		const match = MODELS.find(m => m.dpr === Math.round(dpr)) || MODELS[1]
 		sw = match.w
@@ -139,6 +139,7 @@ export function applyWindowLayout() {
 		`屏幕:${rect.screenW}x${rect.screenH}`)
 	try {
 		setWindowRect(rect.x, rect.y, rect.w, rect.h)
+		setDraggableArea(0, 0, 200, 80)
 	} catch (e) {
 		console.error('[windowLayout] setWindowRect 失败:', e)
 	}
@@ -182,6 +183,8 @@ function applyByCallbackSize(w, h) {
 
 	try {
 		setWindowRect(x, y, winW, winH)
+		setDraggableArea(0, 0, 200, 80)
+
 	} catch (e) {
 		console.error('[windowLayout] setWindowRect 失败:', e)
 	}
@@ -219,11 +222,27 @@ export function initWindowLayout(onChange) {
 
 	// 3. setLayoutAction
 	if (typeof setLayoutAction === 'function') {
-		setLayoutAction(function(w, h) {
+		setLayoutAction(function (w, h) {
 			console.log('[windowLayout] setLayoutAction 回调:', w, h)
 			const rect = applyByCallbackSize(w, h)
 			// ★ 只有 rect 有效才回调
 			if (rect && onChange) onChange(rect)
 		})
+	}
+}
+
+// ================= 可拖动区域 =================
+function setDraggableArea(x, y, w, h) {
+	if (typeof setWindowDrag !== 'function') {
+		console.warn('[windowLayout] setWindowDrag 不可用')
+		return false
+	}
+	try {
+		setWindowDrag(x, y, w, h)
+		return true
+	}
+	catch (e) {
+		console.error('[windowLayout] setWindowDrag 失败:', e)
+		return false
 	}
 }

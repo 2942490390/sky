@@ -7,7 +7,7 @@
 				<view class="mini-btn add" @click="addRow">+ 新增</view>
 				<view class="mini-btn reset" @click="onReset">恢复默认</view>
 				<view class="mini-btn copy" @click="onCopy">复制JS</view>
-				<view class="mini-btn import" @click="openImport">导入指针链</view>
+				<view class="mini-btn import" @click="openImport">导入指针</view>
 			</view>
 		</view>
 
@@ -115,7 +115,19 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { loadOffsets, saveOffsets, resetOffsets, exportAsJS, getKeyOptions } from '@/common/offsetsStore.js'
+
+import {
+	loadOffsets,
+	saveOffsets,
+	resetOffsets,
+	exportAsJS,
+	getKeyOptions,
+	getUpdateStatus,
+	applyNewConfig,
+	keepLocalConfig,
+	syncHashSilently
+} from '@/common/offsetsStore.js'
+
 import { getLabel } from '@/common/functionLabels.js'
 import { clearOffsets, clearAllAddrCache } from '@/common/h5gg.js'
 import { parseText, toChainPair, filterStableChains, checkHeader } from '@/common/pointerImporter.js'
@@ -133,7 +145,6 @@ let viewportHeight = 0
 let observer = null
 let focusScrollTimer = null
 let scrollFinalizeTimer = null
-let scrollRequestId = 0
 
 // ===== 唯一 id 生成器 =====
 let _uid = 0
@@ -422,7 +433,64 @@ function loadToList() {
 	list.value = arr
 }
 
+// ================= 指针链更新检查（解耦后：页面自己弹窗） =================
+
+/**
+ * 检查 JS 配置是否更新，并弹窗询问用户
+ */
+function checkOffsetsUpdate() {
+	const status = getUpdateStatus()
+
+	// 情况1：没有缓存 → 用 JS 配置，不用管
+	if (!status.hasCache) {
+		return
+	}
+
+	// 情况2：旧版本升级（有缓存但没 hash）→ 静默补 hash，不弹窗
+	if (status.isFirstTime) {
+		syncHashSilently()
+		return
+	}
+
+	// 情况3：hash 一致 → 无事发生
+	if (!status.hasUpdate) {
+		return
+	}
+
+	// 情况4：hash 不一致 → 弹窗询问
+	uni.showModal({
+		title: '指针链已更新',
+		content: '检测到新版本的指针链配置，是否使用新版本？\n\n选「是」：使用新版本（覆盖本地）\n选「否」：继续使用本地配置',
+		confirmText: '是',
+		cancelText: '否',
+		success: (res) => {
+			if (res.confirm) {
+				applyNewConfig()
+				uni.showToast({ icon: 'success', title: '已使用新版本', duration: 1200 })
+			} else {
+				keepLocalConfig()
+				uni.showToast({ icon: 'none', title: '继续使用本地配置', duration: 1200 })
+			}
+			// ★ 通知外部：配置变了，需要清缓存
+			onOffsetsChanged()
+		}
+	})
+}
+
+/**
+ * 配置变更后的统一清理（由页面决定做什么）
+ */
+function onOffsetsChanged() {
+	clearOffsets()
+	clearAllAddrCache()
+	loadToList()
+}
+
 onMounted(async () => {
+	// ★ 先检查更新（弹窗逻辑在这里）
+	checkOffsetsUpdate()
+
+	// 加载列表
 	loadToList()
 
 	const query = uni.createSelectorQuery()
@@ -826,7 +894,7 @@ async function applyChainToTarget(c) {
 
 .toolbar .tools {
 	display: flex;
-	gap: 6px;
+	gap: 4px;
 	flex-wrap: wrap;
 }
 
