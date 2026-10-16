@@ -83,7 +83,6 @@
 		</view>
 	</view>
 </template>
-
 <script setup>
 import {
 	reactive,
@@ -91,6 +90,7 @@ import {
 	onMounted,
 	onUnmounted
 } from 'vue'
+
 import {
 	energyLoop,
 	stopEnergyLoop,
@@ -103,6 +103,7 @@ import {
 	setCandleVisibility,
 	clearCandleAddr
 } from '../common/h5gg.js'
+
 import {
 	readCoordOnce,
 	startCoordLoop,
@@ -141,6 +142,9 @@ const coord = reactive({
 // ===== 自动跑图 UI 状态 =====
 const autoRunLabel = ref('开始跑图')
 let autoRunInterval = 3.8
+
+// ★ 弹窗中标志：弹窗期间不要停跑图
+let isPrompting = false
 
 const lockHeightLabel = ref('锁定高度')
 
@@ -198,7 +202,7 @@ async function editAxis(axis) {
 		`修改 ${axis.toUpperCase()} 坐标（当前 ${current.toFixed(3)}）：`,
 		String(current)
 	)
-	if (input === null) return
+	if (input === null || input === '') return
 	const v = parseFloat(input)
 	if (!Number.isFinite(v)) {
 		uni.showToast({
@@ -215,25 +219,31 @@ async function editAxis(axis) {
 }
 
 // ===== 自动跑图 =====
+
+/**
+ * ★ 用 uni.showModal 替代 prompt，兼容性更好
+ * 返回 true = 用户确认；false = 用户取消/失败
+ */
+function confirmStartAutoRun() {
+	return new Promise((resolve) => {
+		uni.showModal({
+			title: '开始跑图',
+			content: `间隔 ${autoRunInterval} 秒，从晨岛开始`,
+			confirmText: '开始',
+			cancelText: '取消',
+			success: (res) => {
+				resolve(!!res.confirm)
+			},
+			fail: () => {
+				resolve(false)
+			}
+		})
+	})
+}
+
 async function toggleAutoRun() {
 	try {
-		console.log('[toggleAutoRun] 开始执行')
-		console.log('[toggleAutoRun] isAutoRunRunning =', typeof isAutoRunRunning, isAutoRunRunning)
-		console.log('[toggleAutoRun] getAutoRunProgress =', typeof getAutoRunProgress)
-		console.log('[toggleAutoRun] stopAutoRunFn =', typeof stopAutoRunFn)
-		console.log('[toggleAutoRun] startAutoRun =', typeof startAutoRun)
-		console.log('[toggleAutoRun] resetAutoRunIndex =', typeof resetAutoRunIndex)
-
-		if (typeof isAutoRunRunning !== 'function') {
-			throw new Error('isAutoRunRunning 未导入')
-		}
-		if (typeof getAutoRunProgress !== 'function') {
-			throw new Error('getAutoRunProgress 未导入')
-		}
-		if (typeof startAutoRun !== 'function') {
-			throw new Error('startAutoRun 未导入')
-		}
-
+		// 已在跑 → 暂停
 		if (isAutoRunRunning()) {
 			stopAutoRunFn()
 			autoRunLabel.value = '继续跑图'
@@ -241,21 +251,29 @@ async function toggleAutoRun() {
 		}
 
 		const progress = getAutoRunProgress()
-		console.log('[toggleAutoRun] progress =', progress)
 		const isFreshStart = progress.current === 0
 
+		// ★ 首次启动弹窗确认（用 showModal）
 		if (isFreshStart) {
-			const input = prompt(
-				'输入间隔秒数，建议 3.8 秒，晨岛开始',
-				String(autoRunInterval)
-			)
-			if (input === null) return
-			const t = parseFloat(input)
-			if (!isNaN(t) && t > 0) autoRunInterval = t
+			isPrompting = true
+			let confirmed = false
+			try {
+				confirmed = await confirmStartAutoRun()
+			} finally {
+				isPrompting = false
+			}
+			if (!confirmed) {
+				// 用户取消，什么都不做
+				return
+			}
+		}
+
+		// ★ 启动前再检查一次，避免竞态
+		if (isAutoRunRunning()) {
+			return
 		}
 
 		autoRunLabel.value = '暂停跑图'
-		console.log('[toggleAutoRun] 调用 startAutoRun, interval =', autoRunInterval)
 
 		await startAutoRun({
 			intervalSec: autoRunInterval,
@@ -265,14 +283,15 @@ async function toggleAutoRun() {
 			},
 			onFinish: () => {
 				autoRunLabel.value = '开始跑图'
-				uni.showToast({ icon: 'none', title: '跑图完成' })
+				uni.showToast({
+					icon: 'none',
+					title: '跑图完成'
+				})
 			}
 		})
-
-		console.log('[toggleAutoRun] startAutoRun 返回')
 	} catch (e) {
-		console.error('[toggleAutoRun] 捕获到错误:', e)
-		console.error('[toggleAutoRun] 错误堆栈:', e.stack)
+		console.error('[toggleAutoRun] 错误:', e)
+		autoRunLabel.value = '开始跑图'
 		uni.showToast({
 			icon: 'none',
 			title: '启动失败: ' + (e && e.message ? e.message : String(e)),
@@ -296,7 +315,10 @@ async function toggleLockHeight() {
 		// 关闭
 		stopLockHeight()
 		lockHeightLabel.value = '锁定高度'
-		uni.showToast({ icon: 'none', title: '已关闭锁定' })
+		uni.showToast({
+			icon: 'none',
+			title: '已关闭锁定'
+		})
 		return
 	}
 
@@ -305,25 +327,36 @@ async function toggleLockHeight() {
 		'输入需要锁定的高度(F32)\n水试炼推荐70  火/风120  土130',
 		'70'
 	)
-	if (input === null) return
+	if (input === null || input === '') return
 	const v = parseFloat(input)
 	if (!Number.isFinite(v)) {
-		uni.showToast({ icon: 'none', title: '请输入有效数字' })
+		uni.showToast({
+			icon: 'none',
+			title: '请输入有效数字'
+		})
 		return
 	}
 
 	const ok = await startLockHeight(v)
 	if (ok) {
 		lockHeightLabel.value = `锁定中 ${v}`
-		uni.showToast({ icon: 'success', title: `已锁定 ${v}` })
+		uni.showToast({
+			icon: 'success',
+			title: `已锁定 ${v}`
+		})
 	} else {
 		lockHeightLabel.value = '锁定高度'
-		uni.showToast({ icon: 'none', title: '锁定失败' })
+		uni.showToast({
+			icon: 'none',
+			title: '锁定失败'
+		})
 	}
 }
 
 // ===== 生命周期 =====
 onMounted(() => {
+	autoRunLabel.value = '开始跑图'
+
 	// 轮询坐标（500ms）
 	startCoordLoop((c) => {
 		coord.x = c.x
@@ -334,7 +367,12 @@ onMounted(() => {
 
 onUnmounted(() => {
 	stopCoordLoop()
-	stopAutoRunFn()
+
+	// ★ 弹窗中不主动停跑图，避免误停
+	if (!isPrompting) {
+		stopAutoRunFn()
+	}
+
 	stopEnergyLoop()
 	stopSpeedLoop()
 	stopBurnLoop()

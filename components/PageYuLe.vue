@@ -635,7 +635,7 @@ function onBigJumpChanging(e) {
 async function onBigJumpChange(e) {
 	bigJumpValue.value = e.detail.value
 	const v = parseFloat(bigJumpValue.value)
-	if (v > 1) {
+	if (v >= 1) {
 		await setBigJump(v)
 	} else {
 		stopBigJumpLoop()

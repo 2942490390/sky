@@ -467,5 +467,6 @@ export const AUTO_RUN_POINTS = [
 	[-2.378, 304.143, 59.318],
 	[-10.035, 307.008, 59.152],
 	[1.003, 309.359, 73.202]
-];
+]
+
 export default AUTO_RUN_POINTS

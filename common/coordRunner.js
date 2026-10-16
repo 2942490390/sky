@@ -45,9 +45,17 @@ export function startCoordLoop(cb, interval = 500) {
 	coordCallback = cb
 	const tick = async () => {
 		if (!coordCallback) return
-		const c = await readCoordOnce()
-		if (c && coordCallback) coordCallback(c)
-		coordTimer = setTimeout(tick, interval)
+		try {
+			const c = await readCoordOnce()
+			if (c && coordCallback) coordCallback(c)
+		} catch (e) {
+			// 忽略单次读取异常，继续轮询
+			console.warn('[coordRunner] readCoordOnce 异常:', e)
+		}
+		// ★ 保证下一轮一定被调度
+		if (coordCallback) {
+			coordTimer = setTimeout(tick, interval)
+		}
 	}
 	tick()
 }
@@ -70,13 +78,14 @@ export function stopCoordLoop() {
 export async function setCoordAxis(axis, value) {
 	const v = Number(value)
 	if (!Number.isFinite(v)) return false
-	const addr = await getPtr('rwdz')
-	if (!addr || addr <= 0) return false
-	const offset = axis === 'x' ? 0 : axis === 'z' ? 4 : 8
 	try {
+		const addr = await getPtr('rwdz')
+		if (!addr || addr <= 0) return false
+		const offset = axis === 'x' ? 0 : axis === 'z' ? 4 : 8
 		h5gg.setValue('0x' + (addr + offset).toString(16), v, 'F32')
 		return true
 	} catch (e) {
+		console.warn('[coordRunner] setCoordAxis 异常:', e)
 		return false
 	}
 }
@@ -85,14 +94,15 @@ export async function setCoordAxis(axis, value) {
  * 瞬移到指定 XYZ
  */
 export async function teleportTo(x, z, y) {
-	const addr = await getPtr('rwdz')
-	if (!addr || addr <= 0) return false
 	try {
+		const addr = await getPtr('rwdz')
+		if (!addr || addr <= 0) return false
 		h5gg.setValue('0x' + addr.toString(16), x, 'F32')
 		h5gg.setValue('0x' + (addr + 4).toString(16), z, 'F32')
 		h5gg.setValue('0x' + (addr + 8).toString(16), y, 'F32')
 		return true
 	} catch (e) {
+		console.warn('[coordRunner] teleportTo 异常:', e)
 		return false
 	}
 }
@@ -104,6 +114,9 @@ let autoRunRunning = false
 let autoRunIndex = 0
 let autoRunIntervalSec = 3.8
 
+// ★ 防止重复启动
+let autoRunStarting = false
+
 /**
  * 启动 / 暂停 / 继续
  * @param {object} opts
@@ -113,31 +126,77 @@ let autoRunIntervalSec = 3.8
  * @param {()=>void} opts.onFinish 结束时回调
  */
 export async function startAutoRun(opts = {}) {
-	const {
-		intervalSec = 3.8,
-			reset = false,
-			onStep,
-			onFinish
-	} = opts
-
-	if (reset) autoRunIndex = 0
-	autoRunIntervalSec = intervalSec > 0 ? intervalSec : 3.8
-	autoRunRunning = true
-
-	const step = async () => {
-		if (!autoRunRunning) return
-		if (autoRunIndex >= AUTO_RUN_POINTS.length) {
-			stopAutoRun()
-			onFinish && onFinish()
-			return
-		}
-		const p = AUTO_RUN_POINTS[autoRunIndex]
-		await teleportTo(p[0], p[1], p[2])
-		onStep && onStep(autoRunIndex, AUTO_RUN_POINTS.length)
-		autoRunIndex++
-		autoRunTimer = setTimeout(step, autoRunIntervalSec * 1000)
+	// ★ 防止重复调用
+	if (autoRunStarting) {
+		console.warn('[coordRunner] startAutoRun 正在启动中，忽略本次调用')
+		return
 	}
-	step()
+	autoRunStarting = true
+
+	try {
+		const {
+			intervalSec = 3.8,
+				reset = false,
+				onStep,
+				onFinish
+		} = opts
+
+		// ★ 先清掉旧定时器
+		if (autoRunTimer) {
+			clearTimeout(autoRunTimer)
+			autoRunTimer = null
+		}
+
+		if (reset) autoRunIndex = 0
+		autoRunIntervalSec = intervalSec > 0 ? intervalSec : 3.8
+		autoRunRunning = true
+
+		const step = async () => {
+			// ★ 停止标志检查
+			if (!autoRunRunning) return
+
+			try {
+				// ★ 到终点
+				if (autoRunIndex >= AUTO_RUN_POINTS.length) {
+					stopAutoRun()
+					try {
+						onFinish && onFinish()
+					} catch (cbErr) {
+						console.error('[coordRunner] onFinish 回调异常:', cbErr)
+					}
+					return
+				}
+
+				const p = AUTO_RUN_POINTS[autoRunIndex]
+				// ★ teleportTo 内部已 try/catch，不会抛
+				await teleportTo(p[0], p[1], p[2])
+
+				// ★ 用户可能在 await 期间停了跑图
+				if (!autoRunRunning) return
+
+				try {
+					onStep && onStep(autoRunIndex, AUTO_RUN_POINTS.length)
+				} catch (cbErr) {
+					console.error('[coordRunner] onStep 回调异常:', cbErr)
+				}
+
+				autoRunIndex++
+			} catch (e) {
+				// ★ 任何异常都不能中断循环
+				console.error('[coordRunner] step 异常:', e)
+			} finally {
+				// ★ 关键：只要还在跑，就一定调度下一轮
+				if (autoRunRunning) {
+					autoRunTimer = setTimeout(step, autoRunIntervalSec * 1000)
+				}
+			}
+		}
+
+		// ★ 启动
+		step()
+	} finally {
+		autoRunStarting = false
+	}
 }
 
 export function stopAutoRun() {
@@ -165,4 +224,13 @@ export function getAutoRunProgress() {
 
 export function getAutoRunPointsCount() {
 	return AUTO_RUN_POINTS.length
+}
+
+/**
+ * ★ 强制重置跑图模块状态（切页面/异常时用）
+ */
+export function resetAutoRunModule() {
+	stopAutoRun()
+	autoRunIndex = 0
+	autoRunStarting = false
 }

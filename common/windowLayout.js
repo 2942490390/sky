@@ -139,7 +139,7 @@ export function applyWindowLayout() {
 		`屏幕:${rect.screenW}x${rect.screenH}`)
 	try {
 		setWindowRect(rect.x, rect.y, rect.w, rect.h)
-		setDraggableArea(rect.x, rect.y, 200, 100)
+		setDraggableArea(0, 0, 200, 100)
 	} catch (e) {
 		console.error('[windowLayout] setWindowRect 失败:', e)
 	}
@@ -183,7 +183,7 @@ function applyByCallbackSize(w, h) {
 
 	try {
 		setWindowRect(x, y, winW, winH)
-		setDraggableArea(x, y, 200, 100)
+		setDraggableArea(0, 0, 200, 100)
 
 	} catch (e) {
 		console.error('[windowLayout] setWindowRect 失败:', e)
