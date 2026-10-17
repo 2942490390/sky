@@ -218,11 +218,21 @@
 						<button class="quick-btn danger" @click="quickCloseAllMagic">全部关闭</button>
 					</view>
 
-					<!-- 8 槽图标网格 -->
+					<!-- 8 槽图标网格（可折叠） -->
 					<scroll-view class="magic-scroll" scroll-y>
 						<template v-for="slot in 8" :key="'slot' + slot">
-							<view class="magic-group">{{ magicSlotTitles[slot - 1] }}</view>
-							<view class="magic-grid">
+							<!-- 折叠头 -->
+							<view class="magic-group" @click="toggleSlotFold(slot)">
+								<view class="magic-group-left">
+									<text class="fold-arrow" :class="{ open: isSlotOpen(slot) }">▶</text>
+									<text class="magic-group-title">{{ magicSlotTitles[slot - 1] }}</text>
+									<text v-if="magicState[slot] !== null" class="magic-group-on">●</text>
+								</view>
+								<text class="magic-group-count">{{ magicItems[slot].length }}</text>
+							</view>
+
+							<!-- 展开内容 -->
+							<view v-show="isSlotOpen(slot)" class="magic-grid">
 								<view v-for="(item, idx) in magicItems[slot]" :key="slot + '_' + idx" class="magic-cell"
 									:class="{ on: magicState[slot] === item.id }" @click="toggleMagicSlot(slot, item)">
 									<view class="magic-icon">
@@ -242,26 +252,26 @@
 					<!-- 卡槽数量 -->
 					<view class="dev-row">
 						<text class="dev-label">卡槽数量</text>
-						<text class="dev-value">{{ fmtAddr(magicCountAddr) }}</text>
-						<button class="mini-copy" @click="copyAddr(magicCountAddr)">复制</button>
+						<text class="dev-value">{{ fmtMagicAddr(magicCountAddr) }}</text>
+						<button class="mini-copy" @click="copyMagicAddr(magicCountAddr)">复制</button>
 					</view>
 
 					<!-- 8 槽 × 3 类 -->
 					<template v-for="row in magicAddrList" :key="'addr' + row.slot">
 						<view class="dev-row">
 							<text class="dev-label">槽{{ row.slot }} · 魔法ID</text>
-							<text class="dev-value">{{ fmtAddr(row.id) }}</text>
-							<button class="mini-copy" @click="copyAddr(row.id)">复制</button>
+							<text class="dev-value">{{ fmtMagicAddr(row.id) }}</text>
+							<button class="mini-copy" @click="copyMagicAddr(row.id)">复制</button>
 						</view>
 						<view class="dev-row">
 							<text class="dev-label">槽{{ row.slot }} · 时间</text>
-							<text class="dev-value">{{ fmtAddr(row.time) }}</text>
-							<button class="mini-copy" @click="copyAddr(row.time)">复制</button>
+							<text class="dev-value">{{ fmtMagicAddr(row.time) }}</text>
+							<button class="mini-copy" @click="copyMagicAddr(row.time)">复制</button>
 						</view>
 						<view class="dev-row">
 							<text class="dev-label">槽{{ row.slot }} · 开关</text>
-							<text class="dev-value">{{ fmtAddr(row.switchAddr) }}</text>
-							<button class="mini-copy" @click="copyAddr(row.switchAddr)">复制</button>
+							<text class="dev-value">{{ fmtMagicAddr(row.switchAddr) }}</text>
+							<button class="mini-copy" @click="copyMagicAddr(row.switchAddr)">复制</button>
 						</view>
 					</template>
 				</view>
@@ -307,15 +317,14 @@ import {
 	getSlotState,
 	getMagicAddrList,
 	getMagicCountAddr,
-	fmtAddr as fmtMagicAddr,
-	resetMagic
+	fmtAddr as fmtMagicAddr
 } from '../common/magic.js'
 
-// ★ 新增：从 magicData.js 导入数据
+// ★ 新增：从 magicData_all.js 导入数据
 import {
 	MAGIC_SLOT_TITLES,
 	MAGIC_ITEMS
-} from '../common/magicData.js'
+} from '../common/magicData_all.js'
 
 // ===== 开关状态 =====
 const swState = reactive({
@@ -343,6 +352,26 @@ const magicAddrList = ref([])
 
 const magicSlotTitles = MAGIC_SLOT_TITLES
 const magicItems = MAGIC_ITEMS
+// ===== 槽位折叠状态 =====
+// 默认只展开第 1 槽，其余收起
+const openSlots = reactive({
+	1: true, 2: false, 3: false, 4: false,
+	5: false, 6: false, 7: false, 8: false
+})
+// ★ 记忆：上一次手动展开的槽（首次为 1）
+let lastOpenSlot = 1
+
+function isSlotOpen(slot) {
+	return !!openSlots[slot]
+}
+
+function toggleSlotFold(slot) {
+	openSlots[slot] = !openSlots[slot]
+	// ★ 若是"展开"操作，则记录为最近展开槽
+	if (openSlots[slot]) {
+		lastOpenSlot = slot
+	}
+}
 // const magicSlotTitles = [
 // 	'槽1 · 背饰', '槽2 · 发型', '槽3 · 斗篷', '槽4 · 裤子',
 // 	'槽5 · 鞋子', '槽6 · 面具', '槽7 · 效果', '槽8 · 拖尾'
@@ -411,9 +440,13 @@ function openMagicPanel() {
 	magicVisible.value = true
 	magicReady.value = isMagicInitialized()
 	magicTab.value = 'func'
+
+	// ★ 打开面板时，只展开「上次手动展开的那个槽」；首次为槽 1
+	for (let s = 1; s <= 8; s++) openSlots[s] = false
+	openSlots[lastOpenSlot] = true
+
 	refreshMagicState()
 }
-
 function closeMagicPanel() {
 	magicVisible.value = false
 }
@@ -461,11 +494,23 @@ function quickCloseAllMagic() {
 
 // ===== 魔法地址复制（复用 copyAddr，但要兼容魔法地址） =====
 // 注意：copyAddr 已在能量盾部分定义，直接复用
-// 但魔法用的是 fmtMagicAddr，需要包一层
-function fmtAddrMagic(addr) {
-	return fmtMagicAddr(addr)
-}
 
+function copyMagicAddr(addr) {
+    if (addr === null || addr === undefined) {
+        uni.showToast({ icon: 'none', title: '魔法未初始化，无地址', duration: 900 })
+        return
+    }
+    const n = Number(addr)
+    if (!Number.isFinite(n) || n <= 0) {
+        uni.showToast({ icon: 'none', title: '地址无效', duration: 800 })
+        return
+    }
+    const str = '0x' + n.toString(16)
+    uni.setClipboardData({
+        data: str,
+        success: () => uni.showToast({ icon: 'success', title: '已复制 ' + str, duration: 800 })
+    })
+}
 // ===== 能量盾面板状态 =====
 const shieldVisible = ref(false)
 const shieldReady = ref(false)
@@ -504,17 +549,20 @@ function openShieldPanel() {
 }
 // ★ 复制地址
 function copyAddr(addr) {
-	if (!addr || addr <= 0) {
-		uni.showToast({ icon: 'none', title: '地址无效', duration: 800 })
-		return
-	}
-	const str = '0x' + Number(addr).toString(16)
-	uni.setClipboardData({
-		data: str,
-		success: () => {
-			uni.showToast({ icon: 'success', title: '已复制 ' + str, duration: 800 })
-		}
-	})
+    if (addr === null || addr === undefined) {
+        uni.showToast({ icon: 'none', title: '能量盾未初始化，无地址', duration: 900 })
+        return
+    }
+    const n = Number(addr)
+    if (!Number.isFinite(n) || n <= 0) {
+        uni.showToast({ icon: 'none', title: '地址无效', duration: 800 })
+        return
+    }
+    const str = '0x' + n.toString(16)
+    uni.setClipboardData({
+        data: str,
+        success: () => uni.showToast({ icon: 'success', title: '已复制 ' + str, duration: 800 })
+    })
 }
 
 function closeShieldPanel() {
@@ -646,7 +694,6 @@ onUnmounted(() => {
 	stopFireworkLoop()
 	stopAllEnergyShield()
 	stopWingBurstLoop()
-	resetMagic()
 	clearWingBurstAddr()
 	stopBigJumpLoop()
 	clearBigJumpAddr()
@@ -924,7 +971,7 @@ onUnmounted(() => {
 .dev-row {
 	display: flex;
 	align-items: center;
-	padding: 5px 0;
+	padding: 2px 0;
 	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
@@ -972,17 +1019,72 @@ onUnmounted(() => {
 	min-height: 0;
 }
 
+/* 折叠头 */
 .magic-group {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 6px;
+	margin: 6px 0 4px;
 	font-size: 12px;
 	font-weight: 700;
 	color: #409EFF;
-	/* padding: 6px 0 4px; */
+	background: rgba(177, 206, 240, 0.35);
 	border-bottom: 2px solid rgba(64, 158, 255, 0.3);
-	/* margin: 8px 0 6px; */
+	border-radius: 6px;
+	cursor: pointer;
+	user-select: none;
 }
 
 .magic-group:first-child {
 	margin-top: 0;
+}
+
+.magic-group:active {
+	background: rgba(177, 206, 240, 0.6);
+}
+
+.magic-group-left {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.magic-group-title {
+	font-size: 12px;
+	font-weight: 700;
+}
+
+/* 该槽已有魔法开启时的小圆点 */
+.magic-group-on {
+	color: #34c759;
+	font-size: 10px;
+	line-height: 1;
+}
+
+.magic-group-count {
+	font-size: 10px;
+	font-weight: 600;
+	color: #fff;
+	background: #409EFF;
+	border-radius: 8px;
+	padding: 1px 7px;
+	min-width: 22px;
+	text-align: center;
+}
+
+/* 折叠箭头 */
+.fold-arrow {
+	display: inline-block;
+	font-size: 10px;
+	color: #409EFF;
+	transition: transform 0.18s ease;
+	transform: rotate(0deg);
+}
+
+.fold-arrow.open {
+	transform: rotate(90deg);
 }
 
 /* 网格：自动填充，每列最小 64px */
@@ -990,7 +1092,7 @@ onUnmounted(() => {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
 	gap: 4px;
-	padding: 4px 0 8px;
+	padding: 4px 0 4px;
 }
 
 /* 单个图标单元 */
@@ -1000,7 +1102,7 @@ onUnmounted(() => {
 	align-items: center;
 	justify-content: center;
 	gap: 4px;
-	padding: 6px 0px;
+	padding: 4px 0px;
 	border-radius: 8px;
 	background: rgba(255, 255, 255, 0.55);
 	border: 1px solid rgba(0, 0, 0, 0.06);
@@ -1041,7 +1143,7 @@ onUnmounted(() => {
 
 /* 名称 */
 .magic-cell-name {
-	font-size: 10px;
+	font-size: 9px;
 	color: #333;
 	text-align: center;
 	line-height: 1.2;
