@@ -2,11 +2,11 @@
 	<view class="page">
 		<!-- ★ 轮播容器 -->
 		<view class="carousel">
-			<image class="carousel-img" src="/static/335f4b4b-bc95-43a5-95ba-cc674707ef41.png" mode="aspectFit" />
-			<image class="carousel-img" src="/static/9579ea38-df66-4398-ba81-2247317cff1b.png" mode="aspectFit" />
-			<!-- <image class="carousel-img" src="/static/lb3_4f5edaf6.png" mode="aspectFit" /> -->
-			<!-- <image class="carousel-img" src="/static/lb4_577ed5e7.png" mode="aspectFit" /> -->
-			<!-- <image class="carousel-img" src="/static/lb5_d93f0206.png" mode="aspectFit" /> -->
+			<image class="carousel-img" src="/static/1.png" mode="aspectFit" />
+			<image class="carousel-img" src="/static/2.png" mode="aspectFit" />
+			<image class="carousel-img" src="/static/3.png" mode="aspectFit" />
+			<image class="carousel-img" src="/static/4.png" mode="aspectFit" />
+			<image class="carousel-img" src="/static/5.png" mode="aspectFit" />
 		</view>
 
 		<view class="set-row">

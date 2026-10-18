@@ -6,7 +6,7 @@ const SEARCH_FROM = '0x100000000'
 const SEARCH_TO = '0x1600000000'
 
 // 槽位偏移
-const SLOT_COUNT = 8
+const SLOT_COUNT = 9
 const SLOT_STEP = 0x38          // 每个槽间隔
 const OFFSET_ID = 0x24          // id   = sw1 - 0x24
 const OFFSET_TIME = 0x14        // time = sw1 - 0x14
@@ -31,7 +31,8 @@ let inited = false
 // 每槽状态：null 或 item.id
 let slotState = {
 	1: null, 2: null, 3: null, 4: null,
-	5: null, 6: null, 7: null, 8: null
+	5: null, 6: null, 7: null, 8: null,
+	9: null
 }
 
 // ================= 工具 =================

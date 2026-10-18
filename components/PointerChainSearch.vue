@@ -31,6 +31,13 @@
 				<button id="clear" @click="onClear" @touchstart="preventTouch">清空日志</button>
 				<button id="togglePanel" @click="onTogglePanel" @touchstart="preventTouch">{{ paramVisible ? '关闭' : '打开'
 				}}</button>
+				<a
+				  id="gotoWeb"
+				  href="https://env-00jy6kq4uyns-static.normal.cloudstatic.cn/桶.html"
+				  target="_blank"
+				  rel="noopener"
+				  @touchstart="preventTouch"
+				>跳转特征码对比</a>
 			</view>
 
 			<view id="logTip">
@@ -676,6 +683,27 @@ button::after {
 #togglePanel {
 	background: #34c759;
 	color: #fff;
+}
+
+#gotoWeb {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 6px;
+	border: none;
+	border-radius: 4px;
+	font-size: 12px;
+	cursor: pointer;
+	touch-action: manipulation;
+	line-height: 1.2;
+	margin: 0;
+	background: #34c759;   /* 和“关闭/打开”同绿色；想区分可换 #5856d6 */
+	color: #fff;
+	text-decoration: none;
+	-webkit-tap-highlight-color: transparent;
+}
+#gotoWeb:active {
+	opacity: 0.8;
 }
 
 button[disabled] {

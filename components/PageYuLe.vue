@@ -220,7 +220,7 @@
 
 					<!-- 8 槽图标网格（可折叠） -->
 					<scroll-view class="magic-scroll" scroll-y>
-						<template v-for="slot in 8" :key="'slot' + slot">
+						<template v-for="slot in SLOT_TOTAL" :key="'slot' + slot">
 							<!-- 折叠头 -->
 							<view class="magic-group" @click="toggleSlotFold(slot)">
 								<view class="magic-group-left">
@@ -342,9 +342,12 @@ const magicReady = ref(false)
 const magicInitLoading = ref(false)
 const magicTab = ref('func')   // 'func' | 'addr'
 
+const SLOT_TOTAL = MAGIC_SLOT_TITLES.length   // 9
+
 const magicState = reactive({
 	1: null, 2: null, 3: null, 4: null,
-	5: null, 6: null, 7: null, 8: null
+	5: null, 6: null, 7: null, 8: null,
+	9: null
 })
 
 const magicCountAddr = ref(null)
@@ -356,7 +359,8 @@ const magicItems = MAGIC_ITEMS
 // 默认只展开第 1 槽，其余收起
 const openSlots = reactive({
 	1: true, 2: false, 3: false, 4: false,
-	5: false, 6: false, 7: false, 8: false
+	5: false, 6: false, 7: false, 8: false,
+	9: false
 })
 // ★ 记忆：上一次手动展开的槽（首次为 1）
 let lastOpenSlot = 1
@@ -431,7 +435,7 @@ const magicItems = {
 // ===== 魔法：刷新状态 =====
 function refreshMagicState() {
 	const s = getSlotState()
-	for (let i = 1; i <= 8; i++) magicState[i] = s[i]
+	for (let i = 1; i <= SLOT_TOTAL; i++) magicState[i] = s[i]
 	magicCountAddr.value = getMagicCountAddr()
 	magicAddrList.value = getMagicAddrList()
 }
@@ -442,7 +446,7 @@ function openMagicPanel() {
 	magicTab.value = 'func'
 
 	// ★ 打开面板时，只展开「上次手动展开的那个槽」；首次为槽 1
-	for (let s = 1; s <= 8; s++) openSlots[s] = false
+	for (let s = 1; s <= SLOT_TOTAL; s++) openSlots[s] = false
 	openSlots[lastOpenSlot] = true
 
 	refreshMagicState()

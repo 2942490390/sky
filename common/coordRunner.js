@@ -81,6 +81,7 @@ export async function setCoordAxis(axis, value) {
 	try {
 		const addr = await getPtr('rwdz')
 		if (!addr || addr <= 0) return false
+		console.log(addr.toString(16))
 		const offset = axis === 'x' ? 0 : axis === 'z' ? 4 : 8
 		h5gg.setValue('0x' + (addr + offset).toString(16), v, 'F32')
 		return true
