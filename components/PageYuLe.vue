@@ -51,6 +51,138 @@
 			</view>
 			<switch :checked="swState.wxyh" color="#FFD966" style="transform: scale(0.75);" @change="wxyh" />
 		</view>
+
+
+
+
+
+		<!-- 无限能量（V2） -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-bolt"></text>
+				<text>无限能量</text>
+			</view>
+			<switch :checked="swState.energy" color="#FFD966" style="transform: scale(0.75);" @change="onEnergy" />
+		</view>
+
+		<!-- 隐身 -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-eye-slash"></text>
+				<text>隐身</text>
+			</view>
+			<switch :checked="swState.invisible" color="#FFD966" style="transform: scale(0.75);"
+				@change="onInvisible" />
+		</view>
+
+		<!-- 守护无翼 -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-feather"></text>
+				<text>守护无翼</text>
+			</view>
+			<switch :checked="swState.noWingGuard" color="#FFD966" style="transform: scale(0.75);"
+				@change="onNoWingGuard" />
+		</view>
+
+		<!-- 燃烧弹 -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-fire"></text>
+				<text>燃烧弹</text>
+			</view>
+			<switch :checked="swState.ignite" color="#FFD966" style="transform: scale(0.75);" @change="onIgnite" />
+		</view>
+
+		<!-- 去风墙 -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-wind"></text>
+				<text>去风墙</text>
+			</view>
+			<switch :checked="swState.wall" color="#FFD966" style="transform: scale(0.75);" @change="onWall" />
+		</view>
+
+		<!-- 无视冥龙 -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-dragon"></text>
+				<text>无视冥龙</text>
+			</view>
+			<switch :checked="swState.krill" color="#FFD966" style="transform: scale(0.75);" @change="onKrill" />
+		</view>
+
+		<!-- 防举报 -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-shield-halved"></text>
+				<text>防举报</text>
+			</view>
+			<switch :checked="swState.antiReport" color="#FFD966" style="transform: scale(0.75);"
+				@change="onAntiReport" />
+		</view>
+
+		<!-- 解锁好友树 -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-user-group"></text>
+				<text>解锁好友树</text>
+			</view>
+			<switch :checked="swState.friendTree" color="#FFD966" style="transform: scale(0.75);"
+				@change="onFriendTree" />
+		</view>
+
+		<!-- 跳过动画 -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-forward"></text>
+				<text>跳过动画</text>
+			</view>
+			<switch :checked="swState.skipAnim" color="#FFD966" style="transform: scale(0.75);" @change="onSkipAnim" />
+		</view>
+
+
+
+		<!-- 全局离线 -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-power-off"></text>
+				<text>全局离线</text>
+			</view>
+			<switch :checked="swState.offline" color="#FFD966" style="transform: scale(0.75);" @change="onOffline" />
+		</view>
+
+		<!-- 神龛解锁 -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-place-of-worship"></text>
+				<text>神龛解锁</text>
+			</view>
+			<button class="sky-btn" @click="onShrine">执行</button>
+		</view>
+
+		<!-- 全动作发包 -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-person-dots-from-line"></text>
+				<text>全动作发包</text>
+			</view>
+			<button class="sky-btn" @click="onAllActions">执行</button>
+		</view>
+
+		<!-- 停止发包 -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-circle-stop"></text>
+				<text>停止发包任务</text>
+			</view>
+			<button class="sky-btn" @click="onStopBatch">停止</button>
+		</view>
+
+
+
+
+
 		<!-- 高危炸翼 -->
 		<view class="sky-task">
 			<view class="task-left">
@@ -326,6 +458,30 @@ import {
 	MAGIC_ITEMS
 } from '../common/magicData_all.js'
 
+
+// from entertainment.js
+import {
+	energyLoopV2, stopEnergyLoopV2,
+	invisibleLoop, stopInvisibleLoop,
+	noWingGuardLoop, stopNoWingGuardLoop,
+	ignoreKrillLoop, stopIgnoreKrillLoop,
+	antiReportLoop, stopAntiReportLoop,
+	friendTreeLoop, stopFriendTreeLoop,
+	igniteLoop, stopIgniteLoop,
+	wallLoop, stopWallLoop,
+	setSkipAnim,
+	fireworkV2,
+	globalOffline, stopGlobalOffline,
+	stopAllEntertainment
+} from '../common/entertainment.js'
+
+// from packetSender.js
+import {
+	startShrineUnlock, startAllActions, stopPacketBatch
+} from '../common/packetSender.js'
+
+
+
 // ===== 开关状态 =====
 const swState = reactive({
 	zhayi: false,
@@ -333,7 +489,18 @@ const swState = reactive({
 	wxdj: false,
 	wxyh: false,
 	wxmf: false,
-	nld: false
+	nld: false,
+	// ===== 新增 =====
+	energy: false,
+	invisible: false,
+	noWingGuard: false,
+	krill: false,
+	antiReport: false,
+	friendTree: false,
+	ignite: false,
+	wall: false,
+	skipAnim: false,
+	offline: false,
 })
 
 // ===== 魔法面板状态 =====
@@ -500,20 +667,20 @@ function quickCloseAllMagic() {
 // 注意：copyAddr 已在能量盾部分定义，直接复用
 
 function copyMagicAddr(addr) {
-    if (addr === null || addr === undefined) {
-        uni.showToast({ icon: 'none', title: '魔法未初始化，无地址', duration: 900 })
-        return
-    }
-    const n = Number(addr)
-    if (!Number.isFinite(n) || n <= 0) {
-        uni.showToast({ icon: 'none', title: '地址无效', duration: 800 })
-        return
-    }
-    const str = '0x' + n.toString(16)
-    uni.setClipboardData({
-        data: str,
-        success: () => uni.showToast({ icon: 'success', title: '已复制 ' + str, duration: 800 })
-    })
+	if (addr === null || addr === undefined) {
+		uni.showToast({ icon: 'none', title: '魔法未初始化，无地址', duration: 900 })
+		return
+	}
+	const n = Number(addr)
+	if (!Number.isFinite(n) || n <= 0) {
+		uni.showToast({ icon: 'none', title: '地址无效', duration: 800 })
+		return
+	}
+	const str = '0x' + n.toString(16)
+	uni.setClipboardData({
+		data: str,
+		success: () => uni.showToast({ icon: 'success', title: '已复制 ' + str, duration: 800 })
+	})
 }
 // ===== 能量盾面板状态 =====
 const shieldVisible = ref(false)
@@ -553,20 +720,20 @@ function openShieldPanel() {
 }
 // ★ 复制地址
 function copyAddr(addr) {
-    if (addr === null || addr === undefined) {
-        uni.showToast({ icon: 'none', title: '能量盾未初始化，无地址', duration: 900 })
-        return
-    }
-    const n = Number(addr)
-    if (!Number.isFinite(n) || n <= 0) {
-        uni.showToast({ icon: 'none', title: '地址无效', duration: 800 })
-        return
-    }
-    const str = '0x' + n.toString(16)
-    uni.setClipboardData({
-        data: str,
-        success: () => uni.showToast({ icon: 'success', title: '已复制 ' + str, duration: 800 })
-    })
+	if (addr === null || addr === undefined) {
+		uni.showToast({ icon: 'none', title: '能量盾未初始化，无地址', duration: 900 })
+		return
+	}
+	const n = Number(addr)
+	if (!Number.isFinite(n) || n <= 0) {
+		uni.showToast({ icon: 'none', title: '地址无效', duration: 800 })
+		return
+	}
+	const str = '0x' + n.toString(16)
+	uni.setClipboardData({
+		data: str,
+		success: () => uni.showToast({ icon: 'success', title: '已复制 ' + str, duration: 800 })
+	})
 }
 
 function closeShieldPanel() {
@@ -694,6 +861,47 @@ async function onBigJumpChange(e) {
 	}
 }
 
+
+
+
+function onEnergy(e) { swState.energy = e.detail.value; energyLoopV2(e.detail.value) }
+function onInvisible(e) { swState.invisible = e.detail.value; invisibleLoop(e.detail.value) }
+function onNoWingGuard(e) { swState.noWingGuard = e.detail.value; noWingGuardLoop(e.detail.value) }
+function onKrill(e) { swState.krill = e.detail.value; ignoreKrillLoop(e.detail.value) }
+function onAntiReport(e) { swState.antiReport = e.detail.value; antiReportLoop(e.detail.value) }
+function onFriendTree(e) { swState.friendTree = e.detail.value; friendTreeLoop(e.detail.value) }
+function onIgnite(e) { swState.ignite = e.detail.value; igniteLoop(e.detail.value) }
+function onWall(e) { swState.wall = e.detail.value; wallLoop(e.detail.value) }
+function onSkipAnim(e) { swState.skipAnim = e.detail.value; setSkipAnim(e.detail.value) }
+
+function onOffline(e) {
+	swState.offline = e.detail.value
+	globalOffline(e.detail.value)
+}
+
+function onShrine() {
+	const res = startShrineUnlock()
+	uni.showToast({ icon: 'none', title: res ? '神龛任务已启动' : '神龛任务启动失败', duration: 800 })
+}
+
+function onAllActions() {
+	const res = startAllActions()
+	uni.showToast({ icon: 'none', title: res ? '全动作任务已启动' : '全动作任务启动失败', duration: 800 })
+}
+
+function onStopBatch() {
+	stopPacketBatch()
+}
+
+function onFireworkV2() {
+	swState.wxyh = !swState.wxyh
+	if (swState.wxyh) fireworkV2()
+	else fireworkLoop(false)   // 关闭复用原项目实现
+}
+
+
+
+
 onUnmounted(() => {
 	stopFireworkLoop()
 	stopAllEnergyShield()
@@ -701,6 +909,9 @@ onUnmounted(() => {
 	clearWingBurstAddr()
 	stopBigJumpLoop()
 	clearBigJumpAddr()
+	stopAllEntertainment()
+	stopGlobalOffline()
+	stopPacketBatch()
 })
 </script>
 

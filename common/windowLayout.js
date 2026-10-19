@@ -134,9 +134,9 @@ export function applyWindowLayout() {
 		return null
 	}
 	const rect = calcWindowRect()
-	console.log('[windowLayout] 横屏(首次)',
-		`窗口:${rect.w}x${rect.h} @ (${rect.x},${rect.y})`,
-		`屏幕:${rect.screenW}x${rect.screenH}`)
+	// console.log('[windowLayout] 横屏(首次)',
+	// 	`窗口:${rect.w}x${rect.h} @ (${rect.x},${rect.y})`,
+	// 	`屏幕:${rect.screenW}x${rect.screenH}`)
 	try {
 		setWindowRect(rect.x, rect.y, rect.w, rect.h)
 		setDraggableArea(0, 0, 200, 100)

@@ -79,6 +79,22 @@ function ensureOffsets() {
 	return offsetsPromise
 }
 
+
+
+
+// h5gg.js 新增导出
+export function getModuleAddr(off) {
+    const main = getMain()
+    return main ? Number(main.mainBase) + off : 0
+}
+
+function derefOnce(off) {
+    const base = getModuleAddr(off)
+    if (!base) return 0
+    return Number(h5gg.getValue(base, 'I64'))
+}
+
+
 /**
  * 同步获取指针地址
  * @param {string} key
