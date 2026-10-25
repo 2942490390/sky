@@ -2,43 +2,171 @@
 // 依赖: h5gg.js 提供的 getPtr / addrjump
 // 功能: 坐标读取 / 单轴写入 / 传送 / 自动跑图循环
 
-import {
-	getPtr
-} from './h5gg.js'
-import {
-	AUTO_RUN_POINTS
-} from './autoRunPoints.js'
+import { getPtr, readHexU32 } from './h5gg.js'
+import { AUTO_RUN_POINTS } from './autoRunPoints.js'
 
-// ================= 坐标读取 =================
-
+// ================= 缓存状态 =================
 let coordTimer = null
 let coordCallback = null
 
-/**
- * 读取一次坐标
- * @returns {Promise<{x:number,z:number,y:number}|null>}
- */
-export async function readCoordOnce() {
-	const addr = await getPtr('rwdz')
-	if (!addr || addr <= 0) return null
+let cachedRwdzAddr = 0     // getPtr('rwdz') 回灌的 x 地址
+let cachedXAddr = 0        // x 的地址（z = +4, y = +8）
+let cachedFlagAddr = 0     // 特征值 -1061397986 的地址，自身Hex: 0xC0BC5A1E
+let cachedKey35Addr = 0    // 特征值 -188 处必须是 35
+
+const FEATURE_VAL = -1061397986
+const CHECK_35 = 35
+const SEARCH_RANGE_MIN = '0x120000000'
+const SEARCH_RANGE_MAX = '0x200000000'
+
+// 提供给外部失效
+export function invalidateRwdzCache() {
+	cachedRwdzAddr = 0
+}
+
+// ================= 缓存工具 =================
+
+// 读一次缓存坐标，返回 null 表示缓存失效/未命中
+function readFromCache() {
+	if (!cachedXAddr) return null
 	try {
-		const x = Number(h5gg.getValue('0x' + addr.toString(16), 'F32'))
-		const z = Number(h5gg.getValue('0x' + (addr + 4).toString(16), 'F32'))
-		const y = Number(h5gg.getValue('0x' + (addr + 8).toString(16), 'F32'))
-		return {
-			x,
-			z,
-			y
-		}
+		// ★ 改用 readHexU32 进行强校验
+		const hexStr = readHexU32(cachedFlagAddr)
+		if (hexStr !== '0xC0BC5A1E') return null
+
+		const c35 = Number(h5gg.getValue('0x' + cachedKey35Addr.toString(16), 'I32'))
+		if (c35 !== CHECK_35) return null
+
+		const x = Number(h5gg.getValue('0x' + cachedXAddr.toString(16), 'F32'))
+		const z = Number(h5gg.getValue('0x' + (cachedXAddr + 4).toString(16), 'F32'))
+		const y = Number(h5gg.getValue('0x' + (cachedXAddr + 8).toString(16), 'F32'))
+		if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(y)) return null
+		return { x, z, y }
 	} catch (e) {
 		return null
 	}
 }
 
+// 校验并回灌缓存：给定疑似特征值地址，验证通过则写缓存并返回坐标
+function trySetCacheFromAddr(addrNum) {
+	try {
+		if (!Number.isFinite(addrNum) || addrNum <= 0) return null
+
+		const flagAddr = addrNum
+		const key35Addr = addrNum - 188
+		const xAddr = addrNum - 148
+
+		// ★ 强制校验自身 Hex 值必须是 0xC0BC5A1E
+		const hexStr = readHexU32(flagAddr)
+		if (hexStr !== '0xC0BC5A1E') return null
+
+		const v35 = Number(h5gg.getValue('0x' + key35Addr.toString(16), 'I32'))
+		if (v35 !== CHECK_35) return null
+
+		const x = Number(h5gg.getValue('0x' + xAddr.toString(16), 'F32'))
+		const z = Number(h5gg.getValue('0x' + (xAddr + 4).toString(16), 'F32'))
+		const y = Number(h5gg.getValue('0x' + (xAddr + 8).toString(16), 'F32'))
+		if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(y)) return null
+
+		cachedFlagAddr = flagAddr
+		cachedKey35Addr = key35Addr
+		cachedXAddr = xAddr
+		return { x, z, y }
+	} catch (e) {
+		return null
+	}
+}
+
+// 搜索一次并更新缓存
+function searchAndCache() {
+	h5gg.clearResults()
+	try {
+		h5gg.searchNumber(String(FEATURE_VAL), 'I32', SEARCH_RANGE_MIN, SEARCH_RANGE_MAX)
+		h5gg.searchNumber(String(FEATURE_VAL), 'I32', SEARCH_RANGE_MIN, SEARCH_RANGE_MAX)
+		const count = h5gg.getResultsCount()
+		if (count === 0) {
+			invalidateCache()
+			return null
+		}
+		const raw = h5gg.getResults(count) || {}
+		for (let i = 0; i < raw.length; i++) {
+			const r = trySetCacheFromAddr(Number(raw[i].address))
+			if (r) return r
+		}
+		invalidateCache()
+		return null
+	} catch (e) {
+		invalidateCache()
+		return null
+	}
+}
+
+/**
+ * 指针链兜底：走 getPtr('rwdz') 读坐标
+ * 成功则回灌缓存（xAddr 直接就是 getPtr 返回值）
+ */
+async function readByPtr() {
+	let xAddr
+	try {
+		xAddr = await getPtr('rwdz')
+	} catch { return null }
+	if (!xAddr) return null
+
+	try {
+		const x = Number(h5gg.getValue('0x' + xAddr.toString(16), 'F32'))
+		const z = Number(h5gg.getValue('0x' + (xAddr + 4).toString(16), 'F32'))
+		const y = Number(h5gg.getValue('0x' + (xAddr + 8).toString(16), 'F32'))
+		if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(y)) {
+			cachedRwdzAddr = 0
+			return null
+		}
+
+		// ★ 回灌三元组，读/写共用
+		// 依据 trySetCacheFromAddr 反推：flagAddr = xAddr + 148，key35Addr = xAddr - 40
+		cachedRwdzAddr = xAddr
+		cachedXAddr = xAddr
+		cachedFlagAddr = xAddr + 148
+		cachedKey35Addr = xAddr - 40
+		return { x, z, y }
+	} catch { return null }
+}
+
+
+
+/**
+ * 使缓存失效
+ */
+function invalidateCache() {
+	cachedXAddr = 0
+	cachedFlagAddr = 0
+	cachedKey35Addr = 0
+	h5gg.clearResults()
+}
+
+export function invalidateCoordCache() {
+	invalidateCache()
+}
+
+// ================= 坐标读取 =================
+
+/**
+ * 读取一次坐标（三层兜底）
+ * 1. 缓存
+ * 2. 搜索
+ * 3. 指针链
+ */
+export async function readCoordOnce() {
+	// const cached = readFromCache()
+	// if (cached) return cached
+
+	// const searched = searchAndCache()
+	// if (searched) return searched
+
+	return readByPtr()
+}
+
 /**
  * 启动坐标轮询
- * @param {(c:{x:number,z:number,y:number})=>void} cb
- * @param {number} interval ms
  */
 export function startCoordLoop(cb, interval = 500) {
 	stopCoordLoop()
@@ -49,10 +177,8 @@ export function startCoordLoop(cb, interval = 500) {
 			const c = await readCoordOnce()
 			if (c && coordCallback) coordCallback(c)
 		} catch (e) {
-			// 忽略单次读取异常，继续轮询
 			console.warn('[coordRunner] readCoordOnce 异常:', e)
 		}
-		// ★ 保证下一轮一定被调度
 		if (coordCallback) {
 			coordTimer = setTimeout(tick, interval)
 		}
@@ -68,44 +194,44 @@ export function stopCoordLoop() {
 	coordCallback = null
 }
 
-// ================= 单轴 / 整体瞬移 =================
+// ================= 单轴 / 整体瞬移（读写共用缓存） =================
 
 /**
  * 修改某一轴坐标
+ * ★ 和读坐标共用 cachedXAddr，不再每次 getPtr
  * @param {'x'|'z'|'y'} axis
  * @param {number} value
  */
 export async function setCoordAxis(axis, value) {
 	const v = Number(value)
 	if (!Number.isFinite(v)) return false
-	try {
-		const addr = await getPtr('rwdz')
-		if (!addr || addr <= 0) return false
-		console.log(addr.toString(16))
-		const offset = axis === 'x' ? 0 : axis === 'z' ? 4 : 8
-		h5gg.setValue('0x' + (addr + offset).toString(16), v, 'F32')
-		return true
-	} catch (e) {
-		console.warn('[coordRunner] setCoordAxis 异常:', e)
-		return false
+
+	// ★ 直接用缓存的地址；没有缓存就先触发一次读取拿到地址
+	if (!cachedXAddr) {
+		// 没有地址缓存，先读一次让地址缓存命中
+		await readCoordOnce()
 	}
+	if (!cachedXAddr) return false
+
+	const offset = axis === 'x' ? 0 : axis === 'z' ? 4 : 8
+	const target = '0x' + (cachedXAddr + offset).toString(16)
+	h5gg.setValue(target, v, 'F32')
+	return true
 }
 
 /**
  * 瞬移到指定 XYZ
+ * ★ 和读坐标共用缓存地址
  */
 export async function teleportTo(x, z, y) {
-	try {
-		const addr = await getPtr('rwdz')
-		if (!addr || addr <= 0) return false
-		h5gg.setValue('0x' + addr.toString(16), x, 'F32')
-		h5gg.setValue('0x' + (addr + 4).toString(16), z, 'F32')
-		h5gg.setValue('0x' + (addr + 8).toString(16), y, 'F32')
-		return true
-	} catch (e) {
-		console.warn('[coordRunner] teleportTo 异常:', e)
-		return false
+	if (!cachedXAddr) {
+		await readCoordOnce()
 	}
+	if (!cachedXAddr) return false
+	h5gg.setValue('0x' + cachedXAddr.toString(16), x, 'F32')
+	h5gg.setValue('0x' + (cachedXAddr + 4).toString(16), z, 'F32')
+	h5gg.setValue('0x' + (cachedXAddr + 8).toString(16), y, 'F32')
+	return true
 }
 
 // ================= 自动跑图 =================
@@ -120,14 +246,8 @@ let autoRunStarting = false
 
 /**
  * 启动 / 暂停 / 继续
- * @param {object} opts
- * @param {number} opts.intervalSec 间隔秒数，默认 3.8
- * @param {boolean} opts.reset 是否从第一个点重新开始
- * @param {(idx:number, total:number)=>void} opts.onStep 每步回调
- * @param {()=>void} opts.onFinish 结束时回调
  */
 export async function startAutoRun(opts = {}) {
-	// ★ 防止重复调用
 	if (autoRunStarting) {
 		console.warn('[coordRunner] startAutoRun 正在启动中，忽略本次调用')
 		return
@@ -137,27 +257,24 @@ export async function startAutoRun(opts = {}) {
 	try {
 		const {
 			intervalSec = 3.8,
-				reset = false,
-				onStep,
-				onFinish
+			reset = false,
+			onStep,
+			onFinish
 		} = opts
 
-		// ★ 先清掉旧定时器
 		if (autoRunTimer) {
 			clearTimeout(autoRunTimer)
 			autoRunTimer = null
 		}
 
 		if (reset) autoRunIndex = 0
-		autoRunIntervalSec = intervalSec > 0 ? intervalSec : 3.8
+		autoRunIntervalSec = Number.isFinite(intervalSec) && intervalSec >= 0 ? intervalSec : 3.0
 		autoRunRunning = true
 
 		const step = async () => {
-			// ★ 停止标志检查
 			if (!autoRunRunning) return
 
 			try {
-				// ★ 到终点
 				if (autoRunIndex >= AUTO_RUN_POINTS.length) {
 					stopAutoRun()
 					try {
@@ -169,10 +286,8 @@ export async function startAutoRun(opts = {}) {
 				}
 
 				const p = AUTO_RUN_POINTS[autoRunIndex]
-				// ★ teleportTo 内部已 try/catch，不会抛
 				await teleportTo(p[0], p[1], p[2])
 
-				// ★ 用户可能在 await 期间停了跑图
 				if (!autoRunRunning) return
 
 				try {
@@ -183,17 +298,14 @@ export async function startAutoRun(opts = {}) {
 
 				autoRunIndex++
 			} catch (e) {
-				// ★ 任何异常都不能中断循环
 				console.error('[coordRunner] step 异常:', e)
 			} finally {
-				// ★ 关键：只要还在跑，就一定调度下一轮
 				if (autoRunRunning) {
 					autoRunTimer = setTimeout(step, autoRunIntervalSec * 1000)
 				}
 			}
 		}
 
-		// ★ 启动
 		step()
 	} finally {
 		autoRunStarting = false

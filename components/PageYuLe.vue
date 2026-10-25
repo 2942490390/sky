@@ -73,7 +73,7 @@
 			</view>
 			<view class="slider-wrap">
 				<slider class="speed-slider" :value="glowValue" @changing="onGlowChanging" @change="onGlowChange"
-					min="1.0" max="1000" step="100" activeColor="#FFD966" backgroundColor="rgba(0,0,0,0.15)"
+					min="1.0" max="999" step="100" activeColor="#FFD966" backgroundColor="rgba(0,0,0,0.15)"
 					block-color="#FFF9E8" block-size="18" />
 				<text class="speed-label">{{ glowValue.toFixed(1) }}</text>
 			</view>
@@ -651,7 +651,7 @@ async function initMagicPanel() {
 		magicReady.value = ok
 		refreshMagicState()
 		uni.showToast({
-			icon: ok ? 'success' : 'none',
+			icon: 'none',
 			title: ok ? '初始化成功' : '初始化失败',
 			duration: 1200
 		})
@@ -769,7 +769,7 @@ async function initShield() {
 		shieldReady.value = ok
 		refreshStates()   // ★ 已包含地址刷新
 		uni.showToast({
-			icon: ok ? 'success' : 'none',
+			icon: 'none',
 			title: ok ? '初始化成功' : '初始化失败',
 			duration: 1200
 		})
@@ -881,13 +881,13 @@ async function onBigJumpChange(e) {
 	}
 }
 
-function onGlowChanging(e){
+function onGlowChanging(e) {
 	glowValue.value = e.detail.value
 }
 
 // 人物发光
 function onGlowChange(e) {
-    glowValue.value = e.detail.value
+	glowValue.value = e.detail.value
 	setPlayerGlow(glowValue.value)
 }
 

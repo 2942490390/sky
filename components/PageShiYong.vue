@@ -7,9 +7,9 @@
 				<text class="fa-solid fa-ruler"></text>
 				<text>人物坐标</text>
 			</view>
-			<button class="sky-btn" @tap="editAxis('x')">X：{{ coord.x.toFixed(3) }}</button>
-			<button class="sky-btn axis" @tap="editAxis('z')">Z：{{ coord.z.toFixed(3) }}</button>
-			<button class="sky-btn axis" @tap="editAxis('y')">Y：{{ coord.y.toFixed(3) }}</button>
+			<button class="sky-btn" @tap="editAxis('x')">X：{{ coord.x }}</button>
+			<button class="sky-btn axis" @tap="editAxis('z')">Z：{{ coord.z }}</button>
+			<button class="sky-btn axis" @tap="editAxis('y')">Y：{{ coord.y }}</button>
 		</view>
 
 		<!-- 自动跑图 -->
@@ -21,6 +21,21 @@
 			<button class="sky-btn" @tap="toggleAutoRun">{{ autoRunLabel }}</button>
 			<button class="sky-btn stop" @tap="stopAutoRun">停止跑图</button>
 		</view>
+
+		<!-- ★ 跑图间隔滑块 -->
+		<view class="sky-task sky-task-block">
+			<view class="task-left">
+				<text class="fa-solid fa-clock"></text>
+				<text>跑图间隔</text>
+			</view>
+			<view class="slider-wrap">
+				<slider class="speed-slider" :value="autoRunInterval" @changing="onIntervalChanging"
+					@change="onIntervalChange" min="0" max="3" step="0.1" activeColor="#FFD966"
+					backgroundColor="rgba(0,0,0,0.15)" block-color="#FFF9E8" block-size="18" />
+				<text class="speed-label">{{ autoRunInterval.toFixed(1) }}s</text>
+			</view>
+		</view>
+
 		<!-- 全局加速 -->
 		<view class="sky-task sky-task-block">
 			<view class="task-left">
@@ -90,7 +105,7 @@ import {
 	onMounted,
 	onUnmounted
 } from 'vue'
-
+import { usePrompt, useConfirm } from '../utils/usePrompt.js'
 import {
 	energyLoop,
 	stopEnergyLoop,
@@ -141,10 +156,20 @@ const coord = reactive({
 
 // ===== 自动跑图 UI 状态 =====
 const autoRunLabel = ref('开始跑图')
-let autoRunInterval = 3.8
+const autoRunInterval = ref(1.0)   // ★ 响应式，默认 1.0s（0.0–3.0）
 
 // ★ 弹窗中标志：弹窗期间不要停跑图
 let isPrompting = false
+
+// ===== 跑图间隔滑块 =====
+function onIntervalChanging(e) {
+	autoRunInterval.value = Number(e.detail.value)
+}
+
+function onIntervalChange(e) {
+	autoRunInterval.value = Number(e.detail.value)
+	// 如果正在跑图，可提示"下次启动生效"；这里不打断当前循环
+}
 
 const lockHeightLabel = ref('锁定高度')
 
@@ -198,23 +223,41 @@ async function yclz(e) {
 // ===== 点击 X / Y / Z 编辑 =====
 async function editAxis(axis) {
 	const current = coord[axis]
-	const input = prompt(
-		`修改 ${axis.toUpperCase()} 坐标（当前 ${current.toFixed(3)}）：`,
-		String(current)
-	)
-	if (input === null || input === '') return
-	const v = parseFloat(input)
-	if (!Number.isFinite(v)) {
-		uni.showToast({
-			icon: 'none',
-			title: '请输入有效数字'
+	const curText = Number.isFinite(current) ? current.toFixed(3) : '未知'
+
+	let input
+	try {
+		input = await usePrompt({
+			title: `修改 ${axis.toUpperCase()} 坐标（当前 ${curText}）`,
+			defaultValue: '',
 		})
+	} catch {
+		return // 取消
+	}
+
+	if (input === null || input === undefined) return
+
+	const raw = String(input).trim()
+	if (raw === '') return // 空 → 当取消，不动坐标（注意：'0' 不会被拦）
+
+	const v = Number(raw)
+	if (!Number.isFinite(v)) {
+		uni.showToast({ icon: 'none', title: '请输入有效数字' })
 		return
 	}
-	const ok = await setCoordAxis(axis, v)
+
+	let ok = false
+	try {
+		const ret = await setCoordAxis(axis, v)
+		ok = ret !== false
+	} catch (e) {
+		console.error('[editAxis] setCoordAxis 异常:', e)
+		ok = false
+	}
+
 	uni.showToast({
-		icon: ok ? 'success' : 'none',
-		title: ok ? `${axis.toUpperCase()} 修改成功` : '修改失败'
+		icon: 'none',
+		title: ok ? `${axis.toUpperCase()} 修改成功` : '修改失败',
 	})
 }
 
@@ -228,15 +271,11 @@ function confirmStartAutoRun() {
 	return new Promise((resolve) => {
 		uni.showModal({
 			title: '开始跑图',
-			content: `间隔 ${autoRunInterval} 秒，从晨岛开始`,
+			content: `间隔 ${autoRunInterval.value.toFixed(1)} 秒，从晨岛开始`,
 			confirmText: '开始',
 			cancelText: '取消',
-			success: (res) => {
-				resolve(!!res.confirm)
-			},
-			fail: () => {
-				resolve(false)
-			}
+			success: (res) => resolve(!!res.confirm),
+			fail: () => resolve(false)
 		})
 	})
 }
@@ -276,7 +315,7 @@ async function toggleAutoRun() {
 		autoRunLabel.value = '暂停跑图'
 
 		await startAutoRun({
-			intervalSec: autoRunInterval,
+			intervalSec: autoRunInterval.value,
 			reset: false,
 			onStep: (idx, total) => {
 				console.log(`[自动跑图] ${idx + 1}/${total}`)

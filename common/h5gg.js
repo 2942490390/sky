@@ -37,16 +37,55 @@ export function addrjump(addr) {
 	return Number(h5gg.getValue(addr, 'I64'))
 }
 
+
+// ================= getMain 缓存 =================
+let _mainCache = null          // 缓存 { mainBase, mainEnd, mainName }
+let _mainCacheTried = false    // 是否已经尝试过（避免失败时反复查）
+/**
+ * 获取主内存范围信息
+ * 该函数尝试获取名为 'Sky-iOS-Gold' 的内存范围，如果直接获取失败，则会遍历所有范围进行查找
+ * @returns {Object|null} 返回包含主内存范围信息的对象，包含 mainBase、mainEnd 和 mainName 属性，如果未找到则返回 null
+ */
 function getMain() {
-	let list = h5gg.getRangesList(0)
+	// ★ 已成功缓存 → 直接返回
+	if (_mainCache) return _mainCache
+	// ★ 已经尝试过且失败 → 不重复查（需要时调用 clearMainCache 重置）
+	if (_mainCacheTried) return null
+
+	_mainCacheTried = true
+
+	let list = null
+	try {
+		list = h5gg.getRangesList('Sky-iOS-Gold')
+	} catch (e) { }
+
+	if (!list || list.length === 0) {
+		try {
+			const all = h5gg.getRangesList(0)
+			for (let i = 0; i < all.length; i++) {
+				if (String(all[i].name || '').indexOf('Sky-iOS-Gold') !== -1) {
+					list = [all[i]]
+					break
+				}
+			}
+		} catch (e) { }
+	}
+
 	if (list && list.length > 0) {
-		return {
-			mainBase: list[0].start,
-			mainEnd: list[0].end,
+		_mainCache = {
+			mainBase: Number(list[0].start),
+			mainEnd: Number(list[0].end),
 			mainName: list[0].name
 		}
+		return _mainCache
 	}
+
 	return null
+}
+
+export function clearMainCache() {
+	_mainCache = null
+	_mainCacheTried = false
 }
 
 export function writeSafe(addrNum, val, type) {
@@ -68,11 +107,11 @@ function ensureOffsets() {
 	if (!offsetsPromise) {
 		offsetsPromise = Promise.resolve(point())
 			.then(res => {
-				Offsets = res || {};
+				Offsets = res || {}
 				return Offsets
 			})
 			.catch(err => {
-				offsetsPromise = null;
+				offsetsPromise = null
 				throw err
 			})
 	}
@@ -88,10 +127,15 @@ export function getModuleAddr(off) {
 	return main ? Number(main.mainBase) + off : 0
 }
 
+/**
+ * 执行一次内存解引用操作
+ * @param {number} off - 输入的内存偏移地址
+ * @returns {number} 解引用后的内存值，如果无法获取基址则返回0
+ */
 function derefOnce(off) {
-	const base = getModuleAddr(off)
-	if (!base) return 0
-	return Number(h5gg.getValue(base, 'I64'))
+	const base = getModuleAddr(off)  // 获取模块基址
+	if (!base) return 0              // 如果无法获取基址，则返回0
+	return Number(h5gg.getValue(base, 'I64'))  // 读取指定地址的64位整数值并转换为Number类型返回
 }
 
 
@@ -126,6 +170,7 @@ export async function getPtr(key) {
 export function clearOffsets() {
 	Offsets = null
 	offsetsPromise = null
+	clearMainCache()
 }
 
 
@@ -140,7 +185,6 @@ export async function energyLoop(checked, num = 99) {
 		energyTimer = null
 	}
 	if (!checked) {
-		// console.log('无限能量：已停止');
 		return
 	}
 
@@ -150,15 +194,13 @@ export async function energyLoop(checked, num = 99) {
 			icon: 'none',
 			title: energyAddr ? '0x' + energyAddr.toString(16) : '未找到'
 		});
-		// console.log('无限能量地址:', energyAddr ? '0x' + energyAddr.toString(16) : '未找到')
 	}
 	if (!energyAddr) {
-		// console.log('无限能量：地址无效');
 		return
 	}
 
 	writeSafe(energyAddr, num, 'F32')
-	energyTimer = setTimeout(() => energyLoop(true, num), 50)
+	energyTimer = setTimeout(() => energyLoop(true, num), 100)
 }
 
 export function stopEnergyLoop() {
@@ -182,7 +224,6 @@ export async function fireworkLoop(checked, num = 5) {
 		fireworkTimer = null
 	}
 	if (!checked) {
-		// console.log('无限烟花：已停止');
 		return
 	}
 
@@ -192,10 +233,8 @@ export async function fireworkLoop(checked, num = 5) {
 			icon: 'none',
 			title: fireworkAddr ? '0x' + fireworkAddr.toString(16) : '未找到'
 		})
-		// console.log('无限烟花地址:', fireworkAddr ? '0x' + fireworkAddr.toString(16) : '未找到')
 	}
 	if (!fireworkAddr) {
-		console.log('无限烟花：地址无效');
 		return
 	}
 
@@ -277,8 +316,6 @@ export async function findSpeedAddr() {
 		const results = []
 		for (let i = 0; i < raw.length; i++) results.push(raw[i])
 
-		// console.log('[加速] 搜索到', results.length, '条结果')
-
 		// 4. 建立 results 里所有地址的集合
 		const addrSet = new Set()
 		for (let i = 0; i < results.length; i++) {
@@ -287,7 +324,6 @@ export async function findSpeedAddr() {
 			const n = Number(item.address)
 			if (Number.isFinite(n) && n > 0) addrSet.add(n)
 		}
-		// console.log('[加速] results 里共有', addrSet.size, '个唯一地址')
 
 		// 5. 遍历 I32 == 1023969417 的项
 		for (let i = 0; i < results.length; i++) {
@@ -330,7 +366,6 @@ export async function findSpeedAddr() {
 			// ★ 三条全满足 → 缓存 B 的地址，返回 B
 			h5gg.clearResults()
 			speedAddr = bAddr // ★ 缓存的是 B，不是 A
-			// console.log('[加速] ✅ 匹配到 B = 0x' + bAddr.toString(16) + '（A = 0x' + addrNum.toString(16) + '）')
 			return bAddr
 		}
 
@@ -372,7 +407,6 @@ export async function speedLoop(enabled, value) {
 			icon: 'none',
 			title: speedAddr ? '0x' + speedAddr.toString(16) : '未找到'
 		})
-		// console.log('全局加速 B 地址:', speedAddr ? '0x' + speedAddr.toString(16) : '未找到')
 	}
 	if (!speedAddr) {
 		return
@@ -441,7 +475,6 @@ export async function burnLoop(enabled) {
 		burnTimer = null
 	}
 	if (!enabled) {
-		// console.log('自燃炸花：已停止')
 		burnState = {
 			index: 0,
 			coolDown: 0
@@ -454,7 +487,6 @@ export async function burnLoop(enabled) {
 			icon: 'none',
 			title: burnAddr ? '0x' + burnAddr.toString(16) : '未找到'
 		})
-		// console.log('自燃炸花地址:', burnAddr ? '0x' + burnAddr.toString(16) : '未找到')
 	}
 	if (burnAddr && burnAddr > 0) {
 		const start = burnState.index
@@ -479,7 +511,6 @@ export async function bloomLoop(enabled) {
 		bloomTimer = null
 	}
 	if (!enabled) {
-		// console.log('自动炸花：已停止')
 		bloomState = {
 			index: 0,
 			coolDown: 0
@@ -492,7 +523,6 @@ export async function bloomLoop(enabled) {
 			icon: 'none',
 			title: bloomAddr ? '0x' + bloomAddr.toString(16) : '未找到'
 		})
-		// console.log('自动炸花地址:', bloomAddr ? '0x' + bloomAddr.toString(16) : '未找到')
 	}
 	if (bloomAddr && bloomAddr > 0) {
 		const start = bloomState.index
@@ -659,7 +689,6 @@ export async function setCandleVisibility(visible) {
 				while (d < 1000) d++;
 			}
 		}
-		// console.log('[蜡烛]', visible ? '显示' : '隐藏', '完成');
 		return true;
 	} catch (err) {
 		// console.error('[setCandleVisibility] 出错:', err);
@@ -916,7 +945,7 @@ function writeWarpSign(addr, str, maxLen = 32) {
  * @param {number} addrNum 地址（数字）
  * @returns {string|null} 如 "0x646E6143"，失败返回 null
  */
-function readHexU32(addrNum) {
+export function readHexU32(addrNum) {
 	if (!addrNum || addrNum <= 0) return null
 	try {
 		const addrStr = '0x' + addrNum.toString(16)
@@ -944,7 +973,7 @@ async function findWarpCsdz() {
 	if (warpCsdz) {
 		const hex = readHexU32(warpCsdz)
 		if (hex === WARPS_CSDZ_HEX) return warpCsdz
-		console.log('[传送] 路牌缓存失效，Hex=' + hex + '，重新搜索')
+		// console.log('[传送] 路牌缓存失效，Hex=' + hex + '，重新搜索')
 		warpCsdz = null
 	}
 
@@ -959,7 +988,9 @@ async function findWarpCsdz() {
 	}
 
 	const results = h5gg.getResults(count) || []
-	console.log('[传送] 路牌特征码搜索结果共 ' + results.length + ' 条，逐个校验…')
+	// console.log('[传送] 路牌特征码搜索结果共 ' + results.length + ' 条，逐个校验…')
+	// console.log(...results);
+
 
 	// ★ 遍历所有候选，逐个校验
 	for (let i = 0; i < results.length; i++) {
@@ -968,6 +999,8 @@ async function findWarpCsdz() {
 
 		const candidate = Number(item.address) + 12   // 路牌地址 = 特征地址 + 12
 		const hex = readHexU32(candidate)
+
+
 
 		if (hex === WARPS_CSDZ_HEX) {
 			warpCsdz = candidate
@@ -980,7 +1013,7 @@ async function findWarpCsdz() {
 	}
 
 	// ★ 全部候选校验失败 → 清空缓存
-	console.log('[传送] ❌ 全部 ' + results.length + ' 条候选均未通过 Hex 校验')
+	// console.log('[传送] ❌ 全部 ' + results.length + ' 条候选均未通过 Hex 校验')
 	warpCsdz = null
 	h5gg.clearResults()
 	return null
@@ -1020,7 +1053,6 @@ let warping = false
 export async function executeWarp(targetMapId, targetZhName) {
 
 	if (warping) {
-		// uni.showToast({ icon: 'none', title: '传送进行中，请稍候' })
 		return { success: false, reason: 'busy' }
 	}
 
@@ -1033,37 +1065,33 @@ export async function executeWarp(targetMapId, targetZhName) {
 
 	warping = true
 	try {
-		// if (!await initMapCore()) throw new Error('地图核心初始化失败')
+		if (!await initMapCore()) throw new Error('地图核心初始化失败')
 		const csAddress = await findWarpCsdz()
 		if (!csAddress) throw new Error('未找到遇境路牌地址')
 
 
 		// const currentMapI32 = Number(h5gg.getValue(currentMapIdAddr, 'I32'))
-		// 获取能量地址，先转成十六进制，然后偏移-420，就是当前地图ID的地址，然后获取这个地址对应ID，类型是I32
+		// 获取人物地址，先转成十六进制，然后偏移+24812，就是当前地图ID的地址，然后获取这个地址对应ID，类型是I32
 		// 1. 拿 I64 字符串（getPtr 返回 I64）
-		const energyRaw = await getPtr('energy')
-		if (!energyRaw) throw new Error('能量地址无效')
+		const rwdzRaw = await getPtr('rwdz')
+		if (!rwdzRaw) throw new Error('人物地址无效')
 
 		// 2. 转 BigInt（兼容 "0x..." 和 "123456789" 两种格式）
-		const energyBig = typeof energyRaw === 'bigint'
-			? energyRaw
-			: BigInt(String(energyRaw).trim())
+		const rwdzBig = typeof rwdzRaw === 'bigint'
+			? rwdzRaw
+			: BigInt(String(rwdzRaw).trim())
 
 		// 3. 转十六进制字符串（BigInt.toString(16) 不丢精度）
-		// const energyHex = energyBig.toString(16)
-		// console.log('[传送] energy I64 =', energyRaw, ' hex = 0x' + energyHex)
+		// const energyHex = rwdzBig.toString(16)
 
-		// 4. 地址 - 420 字节（BigInt 运算，不丢精度）
-		const mapIdBig = energyBig - 420n
+		// 4. 地址 + 24812 字节（BigInt 运算，不丢精度）
+		const mapIdBig = rwdzBig + 24812n
 		const mapIdAddrHex = '0x' + mapIdBig.toString(16)
-
-		// console.log('[传送] mapIdAddr =', mapIdAddrHex, '(energy - 420)')
 
 		// 5. 读该地址的 I32 = 当前地图 ID
 		const currentMapI32 = Number(h5gg.getValue(mapIdAddrHex, 'I32'))
-		// console.log('[传送] currentMapI32 =', currentMapI32, ' target =', targetMapI32)
 
-
+		uni.showToast({ icon: 'none', title: '当前地图ID' + currentMapI32 })
 		// alert('当前地图ID: ' + currentMapI32 + ', 目标地图ID: ' + targetMapI32)
 
 
@@ -1077,8 +1105,6 @@ export async function executeWarp(targetMapId, targetZhName) {
 			originalWing = Number(h5gg.getValue('0x' + wingAddr.toString(16), 'I32'))
 		}
 
-		const r = strToHexLE(targetMapId)
-		console.log(r)
 		// 4. 写路牌
 		writeWarpSign(csAddress, targetMapId, 32)
 		console.log('[传送] 写后字符串:', readStringAt(csAddress, 32))
@@ -1174,7 +1200,7 @@ export async function initMapCore() {
 	h5gg.searchNumber('3267887104', 'I64', '0x130000000', '0x180000000');
 	const count = h5gg.getResultsCount();
 	if (count === 0) {
-		console.error('[地图核心] 未找到特征码 3267887104，初始化失败。');
+		// console.error('[地图核心] 未找到特征码 3267887104，初始化失败。');
 		h5gg.clearResults();
 		return false;
 	}

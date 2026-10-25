@@ -2,8 +2,8 @@
 // 特征魔法核心逻辑（移植自魔法.html）
 import { writeSafe } from './h5gg.js'
 // ================= 常量 =================
-const SEARCH_FROM = '0x110000000'
-const SEARCH_TO = '0x1600000000'
+const SEARCH_FROM = '0x120000000'
+const SEARCH_TO = '0x200000000'
 
 // 槽位偏移
 const SLOT_COUNT = 9
@@ -54,7 +54,7 @@ export function initMagic() {
 
 		// ---------- 1. 搜索槽位基准 ----------
 		h5gg.clearResults()
-		h5gg.searchNumber('17843', 'I32', SEARCH_FROM, SEARCH_TO)
+		h5gg.searchNumber('19203', 'I32', SEARCH_FROM, SEARCH_TO)
 		if (h5gg.getResultsCount() === 0) {
 			h5gg.clearResults()
 			return false
@@ -93,43 +93,31 @@ export function initMagic() {
 
 		// ---------- 2. 搜索卡槽数量地址 ----------
 		h5gg.clearResults()
-		h5gg.searchNumber('2035109393', 'I32', SEARCH_FROM, SEARCH_TO)
+		// h5gg.searchNumber('2035109393', 'I32', SEARCH_FROM, SEARCH_TO)
+		h5gg.searchNumber('24504', 'I16', SEARCH_FROM, SEARCH_TO)
 		h5gg.searchNearby('307', 'I32', '0x100')
 		h5gg.searchNumber('307', 'I32', SEARCH_FROM, SEARCH_TO)
 
 		const cnt = h5gg.getResultsCount()
+		console.log('卡槽数量候选搜索结果：', cnt)
 		if (cnt > 0) {
 			const res = h5gg.getResults(cnt)
-			console.log('卡槽数量地址：', res.map(r => r.address))
+			// console.log('卡槽数量地址：', res.map(r => r.address))
+			// console.log('卡槽数量地址：', ...res)
 			for (let j = 0; j < res.length; j++) {
 				const addr307 = Number(res[j].address)
-				const verifyAddr = addr307 - 64
+				const verifyAddr = addr307 - 88 // 往上偏移88字节
+				console.log('验证地址：', Number(h5gg.getValue('0x' + verifyAddr.toString(16), 'I32')))
 				try {
-					if (Number(h5gg.getValue('0x' + verifyAddr.toString(16), 'I32')) === 1) {
-						magicCountAddr = verifyAddr - 8
+					if (Number(h5gg.getValue('0x' + verifyAddr.toString(16), 'I32')) === 0) {
+						magicCountAddr = verifyAddr
+						console.log('卡槽数量地址：', magicCountAddr)
 						break
 					}
 				} catch (e) { }
 			}
 		}
 		h5gg.clearResults()
-
-		// 2.2 ★ 兜底：搜索失败 → 用稳定地址 sw1 推导
-		if (magicCountAddr === null) {
-			const cand = sw1 + COUNT_ADDR_DELTA
-			try {
-				const v = Number(h5gg.getValue('0x' + cand.toString(16), 'I32'))
-				if (COUNT_VALID.includes(v)) {
-					magicCountAddr = cand
-					console.log('卡槽数量地址兜底命中：0x' + cand.toString(16), '当前值=', v)
-				} else {
-					console.log('兜底地址读值异常(' + v + ')，不采用：0x' + cand.toString(16))
-				}
-			} catch (e) {
-				console.log('兜底读取失败：', e)
-			}
-		}
-
 
 		inited = true
 		return true
