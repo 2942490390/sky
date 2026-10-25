@@ -71,7 +71,7 @@
 				<text class="fa-solid fa-lightbulb"></text>
 				<text>人物发光</text>
 			</view>
-			<view>
+			<view class="slider-wrap">
 				<slider class="speed-slider" :value="glowValue" @changing="onGlowChanging" @change="onGlowChange"
 					min="1.0" max="1000" step="100" activeColor="#FFD966" backgroundColor="rgba(0,0,0,0.15)"
 					block-color="#FFF9E8" block-size="18" />
