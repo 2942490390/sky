@@ -65,6 +65,20 @@
 			<switch :checked="swState.energy" color="#FFD966" style="transform: scale(0.75);" @change="onEnergy" />
 		</view>
 
+		<!-- 人物发光 -->
+		<view class="sky-task">
+			<view class="task-left">
+				<text class="fa-solid fa-lightbulb"></text>
+				<text>人物发光</text>
+			</view>
+			<view>
+				<slider class="speed-slider" :value="glowValue" @changing="onGlowChanging" @change="onGlowChange"
+					min="1.0" max="1000" step="100" activeColor="#FFD966" backgroundColor="rgba(0,0,0,0.15)"
+					block-color="#FFF9E8" block-size="18" />
+				<text class="speed-label">{{ glowValue.toFixed(1) }}</text>
+			</view>
+		</view>
+
 		<!-- 隐身 -->
 		<view class="sky-task">
 			<view class="task-left">
@@ -251,21 +265,24 @@
 							<view class="btn-row">
 								<text class="btn-label">能量盾</text>
 								<button class="toggle-btn" :class="states.main[n - 1] ? 'on' : 'off'"
-									:disabled="!shieldReady" @click="toggle('main', n - 1)">{{ states.main[n - 1] ? '开'
+									:disabled="!shieldReady" @click="toggle('main', n - 1)">{{ states.main[n - 1] ?
+										'开'
 										: '关' }}</button>
 							</view>
 
 							<view class="btn-row">
 								<text class="btn-label">它人炸</text>
 								<button class="toggle-btn" :class="states.other[n - 1] ? 'on' : 'off'"
-									:disabled="!shieldReady" @click="toggle('other', n - 1)">{{ states.other[n - 1] ?
+									:disabled="!shieldReady" @click="toggle('other', n - 1)">{{ states.other[n - 1]
+										?
 										'开' : '关' }}</button>
 							</view>
 
 							<view class="btn-row">
 								<text class="btn-label">自身炸</text>
 								<button class="toggle-btn" :class="states.self[n - 1] ? 'on' : 'off'"
-									:disabled="!shieldReady" @click="toggle('self', n - 1)">{{ states.self[n - 1] ? '开'
+									:disabled="!shieldReady" @click="toggle('self', n - 1)">{{ states.self[n - 1] ?
+										'开'
 										: '关' }}</button>
 							</view>
 						</view>
@@ -424,7 +441,8 @@ import {
 	clearWingBurstAddr,
 	setBigJump,
 	stopBigJumpLoop,
-	clearBigJumpAddr
+	clearBigJumpAddr,
+	setPlayerGlow
 } from '../common/h5gg.js'
 
 import {
@@ -502,6 +520,8 @@ const swState = reactive({
 	skipAnim: false,
 	offline: false,
 })
+
+const glowValue = ref(0)
 
 // ===== 魔法面板状态 =====
 const magicVisible = ref(false)
@@ -861,7 +881,15 @@ async function onBigJumpChange(e) {
 	}
 }
 
+function onGlowChanging(e){
+	glowValue.value = e.detail.value
+}
 
+// 人物发光
+function onGlowChange(e) {
+    glowValue.value = e.detail.value
+	setPlayerGlow(glowValue.value)
+}
 
 
 function onEnergy(e) { swState.energy = e.detail.value; energyLoopV2(e.detail.value) }

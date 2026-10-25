@@ -1,8 +1,8 @@
 // common/magic.js
 // 特征魔法核心逻辑（移植自魔法.html）
-
+import { writeSafe } from './h5gg.js'
 // ================= 常量 =================
-const SEARCH_FROM = '0x100000000'
+const SEARCH_FROM = '0x110000000'
 const SEARCH_TO = '0x1600000000'
 
 // 槽位偏移
@@ -10,6 +10,12 @@ const SLOT_COUNT = 9
 const SLOT_STEP = 0x38          // 每个槽间隔
 const OFFSET_ID = 0x24          // id   = sw1 - 0x24
 const OFFSET_TIME = 0x14        // time = sw1 - 0x14
+
+// 相对偏移
+// 卡槽数量地址 = sw1 + 0x4540 (十进制17728)
+const COUNT_ADDR_DELTA = 0x4540
+// 卡槽数量合法值（0=全关，9=任意开）
+const COUNT_VALID = [0, 9]
 
 // 开关值
 const SWITCH_ON = 0             // 开启时写 0
@@ -26,7 +32,7 @@ const COUNT_ALL_OFF = 0
 // ================= 模块状态 =================
 let Magic = {}                  // { 1: {id, time, switchAddr}, ... 8 }
 let magicCountAddr = null       // 卡槽数量地址
-let inited = false
+let inited = false				// 初始化标志
 
 // 每槽状态：null 或 item.id
 let slotState = {
@@ -35,16 +41,6 @@ let slotState = {
 	9: null
 }
 
-// ================= 工具 =================
-function writeSafe(addrNum, val, type) {
-	if (!addrNum || addrNum <= 0) return false
-	try {
-		h5gg.setValue('0x' + addrNum.toString(16), val, type)
-		return true
-	} catch (e) {
-		return false
-	}
-}
 
 // ================= 初始化 =================
 export function initMagic() {
@@ -104,6 +100,7 @@ export function initMagic() {
 		const cnt = h5gg.getResultsCount()
 		if (cnt > 0) {
 			const res = h5gg.getResults(cnt)
+			console.log('卡槽数量地址：', res.map(r => r.address))
 			for (let j = 0; j < res.length; j++) {
 				const addr307 = Number(res[j].address)
 				const verifyAddr = addr307 - 64
@@ -112,10 +109,27 @@ export function initMagic() {
 						magicCountAddr = verifyAddr - 8
 						break
 					}
-				} catch (e) {}
+				} catch (e) { }
 			}
 		}
 		h5gg.clearResults()
+
+		// 2.2 ★ 兜底：搜索失败 → 用稳定地址 sw1 推导
+		if (magicCountAddr === null) {
+			const cand = sw1 + COUNT_ADDR_DELTA
+			try {
+				const v = Number(h5gg.getValue('0x' + cand.toString(16), 'I32'))
+				if (COUNT_VALID.includes(v)) {
+					magicCountAddr = cand
+					console.log('卡槽数量地址兜底命中：0x' + cand.toString(16), '当前值=', v)
+				} else {
+					console.log('兜底地址读值异常(' + v + ')，不采用：0x' + cand.toString(16))
+				}
+			} catch (e) {
+				console.log('兜底读取失败：', e)
+			}
+		}
+
 
 		inited = true
 		return true

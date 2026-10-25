@@ -1,5 +1,5 @@
 import { point } from './getPoint.js'
-import { map_point, mapIdToName, zhAlias } from './getMapPoint.js'   // ★ 加 mapIdToName / zhAlias
+import { map_point, mapIdToName, zhAlias } from './getMapPoint.js'
 
 
 
@@ -49,7 +49,7 @@ function getMain() {
 	return null
 }
 
-function writeSafe(addrNum, val, type) {
+export function writeSafe(addrNum, val, type) {
 	if (!addrNum || addrNum <= 0) return false
 	try {
 		h5gg.setValue('0x' + addrNum.toString(16), val, type)
@@ -84,14 +84,14 @@ function ensureOffsets() {
 
 // h5gg.js 新增导出
 export function getModuleAddr(off) {
-    const main = getMain()
-    return main ? Number(main.mainBase) + off : 0
+	const main = getMain()
+	return main ? Number(main.mainBase) + off : 0
 }
 
 function derefOnce(off) {
-    const base = getModuleAddr(off)
-    if (!base) return 0
-    return Number(h5gg.getValue(base, 'I64'))
+	const base = getModuleAddr(off)
+	if (!base) return 0
+	return Number(h5gg.getValue(base, 'I64'))
 }
 
 
@@ -690,6 +690,18 @@ export async function setGoldF32(value) {
 	const addr = await getPtr('goldF32')
 	if (!addr || addr <= 0) return false
 	return writeSafe(addr, v, 'F32')
+}
+
+// ================= 人物发光（F32） =================
+export async function setPlayerGlow(value = 1.0) {
+	const v = parseFloat(value)
+	if (!Number.isFinite(v)) return false
+	//先获取能量地址，通过偏移0x19AC获取发光地址,相差6572（十进制）
+	const energyAddr = await getPtr('energy')  //先获取能量地址，通过偏移0x19AC获取发光地址,相差6572（十进制）
+	if (!energyAddr || energyAddr <= 0) return false
+	const glowAddr = energyAddr + 0x19AC
+	if (!glowAddr || glowAddr <= 0) return false
+	return writeSafe(glowAddr, v, 'F32')
 }
 
 // ================= 高危炸翼（I32，循环写入） =================
