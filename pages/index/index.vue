@@ -15,7 +15,7 @@
 						:scale-slider-value="scaleSliderValue" @update-scale="onScaleChange" />
 
 					<component v-for="(item, index) in otherPages" :key="item.key" :is="item.component"
-						v-show="activeNav === index + 1" />
+						:ref="el => setPageRef(item.key, el)" v-show="activeNav === index + 1" />
 				</view>
 			</view>
 		</view>
@@ -24,7 +24,9 @@
 
 <script setup>
 	import {
-		ref
+		ref,
+		nextTick,
+		onMounted
 	} from 'vue'
 	import NavBar from '@/components/NavBar.vue'
 	import PageHome from '@/components/PageHome.vue'
@@ -70,12 +72,61 @@
 		}
 	]
 
+
+	// ★ 动态 ref 容器
+	const pageRefs = {}
+
+	const activeNav = ref(0)
+
+	function setPageRef(key, el) {
+		if (el) pageRefs[key] = el
+		else delete pageRefs[key]
+	}
+
+	// 从 activeNav 拿到 key
+	function keyOfNav(index) {
+		if (index === 0) return null
+		return otherPages[index - 1]?.key ?? null
+	}
+
+	// 激活/停用某页
+	function setPageActive(index, on) {
+		const key = keyOfNav(index)
+		if (!key) return
+		const inst = pageRefs[key]
+		if (!inst) return
+		if (on && typeof inst.activate === 'function') inst.activate()
+		if (!on && typeof inst.deactivate === 'function') inst.deactivate()
+	}
+
+	async function switchPage(index) {
+		if (activeNav.value === index) return
+		const prev = activeNav.value
+
+		// 先停上一个
+		if (prev !== 0) setPageActive(prev, false)
+
+		activeNav.value = index
+
+		// 再启下一个
+		if (index !== 0) {
+			await nextTick()
+			setPageActive(index, true)
+		}
+	}
+
+	// 首屏：如果默认打开的是非主页，也要激活
+	onMounted(async () => {
+		await nextTick()
+		if (activeNav.value !== 0) setPageActive(activeNav.value, true)
+	})
+
 	const load = useReload()
 
 	const reloadKey = load.reloadKey
 	const reload = load.reload
 
-	const activeNav = ref(0)
+
 
 	// ★ 缩放状态提升到父组件
 	const scaleSliderValue = ref(100) // 滑块显示值（60~100）
@@ -91,9 +142,9 @@
 		scaleValue.value = val / 100
 	}
 
-	const switchPage = (index) => {
-		activeNav.value = index
-	}
+	// const switchPage = (index) => {
+	// 	activeNav.value = index
+	// }
 
 	const reloading = ref(false)
 

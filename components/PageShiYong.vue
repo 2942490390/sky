@@ -99,355 +99,371 @@
 	</view>
 </template>
 <script setup>
-import {
-	reactive,
-	ref,
-	onMounted,
-	onUnmounted
-} from 'vue'
-import { usePrompt, useConfirm } from '../utils/usePrompt.js'
-import {
-	energyLoop,
-	stopEnergyLoop,
-	speedLoop,
-	stopSpeedLoop,
-	burnLoop,
-	bloomLoop,
-	stopBurnLoop,
-	stopBloomLoop,
-	setCandleVisibility,
-	clearCandleAddr
-} from '../common/h5gg.js'
+	import {
+		reactive,
+		ref,
+		onUnmounted
+	} from 'vue'
+	import {
+		usePrompt,
+		useConfirm
+	} from '../utils/usePrompt.js'
+	import {
+		energyLoop,
+		stopEnergyLoop,
+		speedLoop,
+		stopSpeedLoop,
+		burnLoop,
+		bloomLoop,
+		stopBurnLoop,
+		stopBloomLoop,
+		setCandleVisibility,
+		clearCandleAddr
+	} from '../common/h5gg.js'
 
-import {
-	readCoordOnce,
-	startCoordLoop,
-	stopCoordLoop,
-	setCoordAxis,
-	startAutoRun,
-	stopAutoRun as stopAutoRunFn,
-	resetAutoRunIndex,
-	isAutoRunRunning,
-	getAutoRunProgress
-} from '../common/coordRunner.js'
+	import {
+		startCoordLoop,
+		stopCoordLoop,
+		setCoordAxis,
+		startAutoRun,
+		stopAutoRun as stopAutoRunFn,
+		resetAutoRunIndex,
+		isAutoRunRunning,
+		getAutoRunProgress
+	} from '../common/coordRunner.js'
 
-import {
-	startLockHeight,
-	stopLockHeight,
-	isLockHeightRunning,
-	getLockHeightValue,
-	clearLockHeightAddr
-} from '../common/lockHeight.js'
+	import {
+		startLockHeight,
+		stopLockHeight,
+		isLockHeightRunning,
+		getLockHeightValue,
+		clearLockHeightAddr
+	} from '../common/lockHeight.js'
 
-// ===== 开关状态 =====
-const swState = reactive({
-	wxnl: false,
-	burn: false,
-	bloom: false,
-	yclz: false
-})
+	// ===== 开关状态 =====
+	const swState = reactive({
+		wxnl: false,
+		burn: false,
+		bloom: false,
+		yclz: false
+	})
 
-// ===== 坐标 =====
-const coord = reactive({
-	x: 0,
-	z: 0,
-	y: 0
-})
+	// ===== 坐标 =====
+	const coord = reactive({
+		x: 0,
+		z: 0,
+		y: 0
+	})
+	const coordActive = ref(false)
+	// ===== 自动跑图 UI 状态 =====
+	const autoRunLabel = ref('开始跑图')
+	const autoRunInterval = ref(1.0) // ★ 响应式，默认 1.0s（0.0–3.0）
+	
+	// ★ 弹窗中标志：弹窗期间不要停跑图
+	let isPrompting = false
 
-// ===== 自动跑图 UI 状态 =====
-const autoRunLabel = ref('开始跑图')
-const autoRunInterval = ref(1.0)   // ★ 响应式，默认 1.0s（0.0–3.0）
+	// ★ 由父组件调用：进入本页
+	function activate() {
+		if (coordActive.value) return
+		coordActive.value = true
+		startCoordLoop((c) => {
+			coord.x = c.x
+			coord.z = c.z
+			coord.y = c.y
+		}, 500, 300) // 首次延迟 300ms
+	}
 
-// ★ 弹窗中标志：弹窗期间不要停跑图
-let isPrompting = false
+	// ★ 由父组件调用：离开本页
+	function deactivate() {
+		if (!coordActive.value) return
+		coordActive.value = false
+		stopCoordLoop()
+		// 停掉自动跑图
+		if (!isPrompting) stopAutoRunFn()
+	}
 
-// ===== 跑图间隔滑块 =====
-function onIntervalChanging(e) {
-	autoRunInterval.value = Number(e.detail.value)
-}
+	// 暴露给父组件
+	defineExpose({
+		activate,
+		deactivate
+	})
 
-function onIntervalChange(e) {
-	autoRunInterval.value = Number(e.detail.value)
-	// 如果正在跑图，可提示"下次启动生效"；这里不打断当前循环
-}
 
-const lockHeightLabel = ref('锁定高度')
 
-// ===== 全局加速 =====
-const speedValue = ref(1.0)
+	onUnmounted(() => {
+		deactivate()
+		// 其余清理不变
+		stopEnergyLoop()
+		stopSpeedLoop()
+		stopBurnLoop()
+		stopBloomLoop()
+		stopLockHeight()
+		clearCandleAddr()
+		clearLockHeightAddr()
+	})
 
-function onSpeedChanging(e) {
-	speedValue.value = e.detail.value
-}
 
-function onSpeedChange(e) {
-	speedValue.value = e.detail.value
-	const v = parseFloat(speedValue.value)
-	if (v > 1) speedLoop(true, v)
-	else speedLoop(false)
-}
+	// ===== 跑图间隔滑块 =====
+	function onIntervalChanging(e) {
+		autoRunInterval.value = Number(e.detail.value)
+	}
 
-// ===== 无限能量 =====
-function wxnl(e) {
-	const checked = e.detail.value
-	swState.wxnl = checked
-	energyLoop(checked)
-}
+	function onIntervalChange(e) {
+		autoRunInterval.value = Number(e.detail.value)
+		// 如果正在跑图，可提示"下次启动生效"；这里不打断当前循环
+	}
 
-// ===== 自燃全开 =====
-function onBurnChange(e) {
-	const checked = e.detail.value
-	swState.burn = checked
-	burnLoop(checked)
-}
+	const lockHeightLabel = ref('锁定高度')
 
-// ===== 自动炸花 =====
-function onBloomChange(e) {
-	const checked = e.detail.value
-	swState.bloom = checked
-	bloomLoop(checked)
-}
+	// ===== 全局加速 =====
+	const speedValue = ref(1.0)
 
-// ===== 隐藏蜡烛 =====
-async function yclz(e) {
-	try {
+	function onSpeedChanging(e) {
+		speedValue.value = e.detail.value
+	}
+
+	function onSpeedChange(e) {
+		speedValue.value = e.detail.value
+		const v = parseFloat(speedValue.value)
+		if (v > 1) speedLoop(true, v)
+		else speedLoop(false)
+	}
+
+	// ===== 无限能量 =====
+	function wxnl(e) {
 		const checked = e.detail.value
-		swState.yclz = checked
-		await setCandleVisibility(!checked)
-	} catch (err) {
-		console.error('[yclz] 出错:', err)
-		swState.yclz = false
-	}
-}
-
-// ===== 点击 X / Y / Z 编辑 =====
-async function editAxis(axis) {
-	const current = coord[axis]
-	const curText = Number.isFinite(current) ? current.toFixed(3) : '未知'
-
-	let input
-	try {
-		input = await usePrompt({
-			title: `修改 ${axis.toUpperCase()} 坐标（当前 ${curText}）`,
-			defaultValue: '',
-		})
-	} catch {
-		return // 取消
+		swState.wxnl = checked
+		energyLoop(checked)
 	}
 
-	if (input === null || input === undefined) return
-
-	const raw = String(input).trim()
-	if (raw === '') return // 空 → 当取消，不动坐标（注意：'0' 不会被拦）
-
-	const v = Number(raw)
-	if (!Number.isFinite(v)) {
-		uni.showToast({ icon: 'none', title: '请输入有效数字' })
-		return
+	// ===== 自燃全开 =====
+	function onBurnChange(e) {
+		const checked = e.detail.value
+		swState.burn = checked
+		burnLoop(checked)
 	}
 
-	let ok = false
-	try {
-		const ret = await setCoordAxis(axis, v)
-		ok = ret !== false
-	} catch (e) {
-		console.error('[editAxis] setCoordAxis 异常:', e)
-		ok = false
+	// ===== 自动炸花 =====
+	function onBloomChange(e) {
+		const checked = e.detail.value
+		swState.bloom = checked
+		bloomLoop(checked)
 	}
 
-	uni.showToast({
-		icon: 'none',
-		title: ok ? `${axis.toUpperCase()} 修改成功` : '修改失败',
-	})
-}
+	// ===== 隐藏蜡烛 =====
+	async function yclz(e) {
+		try {
+			const checked = e.detail.value
+			swState.yclz = checked
+			await setCandleVisibility(!checked)
+		} catch (err) {
+			console.error('[yclz] 出错:', err)
+			swState.yclz = false
+		}
+	}
 
-// ===== 自动跑图 =====
+	// ===== 点击 X / Y / Z 编辑 =====
+	async function editAxis(axis) {
+		const current = coord[axis]
+		const curText = Number.isFinite(current) ? current.toFixed(3) : '未知'
 
-/**
- * ★ 用 uni.showModal 替代 prompt，兼容性更好
- * 返回 true = 用户确认；false = 用户取消/失败
- */
-function confirmStartAutoRun() {
-	return new Promise((resolve) => {
-		uni.showModal({
-			title: '开始跑图',
-			content: `间隔 ${autoRunInterval.value.toFixed(1)} 秒，从晨岛开始`,
-			confirmText: '开始',
-			cancelText: '取消',
-			success: (res) => resolve(!!res.confirm),
-			fail: () => resolve(false)
-		})
-	})
-}
+		let input
+		try {
+			input = await usePrompt({
+				title: `修改 ${axis.toUpperCase()} 坐标（当前 ${curText}）`,
+				defaultValue: '',
+			})
+		} catch {
+			return // 取消
+		}
 
-async function toggleAutoRun() {
-	try {
-		// 已在跑 → 暂停
-		if (isAutoRunRunning()) {
-			stopAutoRunFn()
-			autoRunLabel.value = '继续跑图'
+		if (input === null || input === undefined) return
+
+		const raw = String(input).trim()
+		if (raw === '') return // 空 → 当取消，不动坐标（注意：'0' 不会被拦）
+
+		const v = Number(raw)
+		if (!Number.isFinite(v)) {
+			uni.showToast({
+				icon: 'none',
+				title: '请输入有效数字'
+			})
 			return
 		}
 
-		const progress = getAutoRunProgress()
-		const isFreshStart = progress.current === 0
+		let ok = false
+		try {
+			const ret = await setCoordAxis(axis, v)
+			ok = ret !== false
+		} catch (e) {
+			console.error('[editAxis] setCoordAxis 异常:', e)
+			ok = false
+		}
 
-		// ★ 首次启动弹窗确认（用 showModal）
-		if (isFreshStart) {
-			isPrompting = true
-			let confirmed = false
-			try {
-				confirmed = await confirmStartAutoRun()
-			} finally {
-				isPrompting = false
-			}
-			if (!confirmed) {
-				// 用户取消，什么都不做
+		uni.showToast({
+			icon: 'none',
+			title: ok ? `${axis.toUpperCase()} 修改成功` : '修改失败',
+		})
+	}
+
+	// ===== 自动跑图 =====
+
+	/**
+	 * ★ 用 uni.showModal 替代 prompt，兼容性更好
+	 * 返回 true = 用户确认；false = 用户取消/失败
+	 */
+	function confirmStartAutoRun() {
+		return new Promise((resolve) => {
+			uni.showModal({
+				title: '开始跑图',
+				content: `间隔 ${autoRunInterval.value.toFixed(1)} 秒，从晨岛开始`,
+				confirmText: '开始',
+				cancelText: '取消',
+				success: (res) => resolve(!!res.confirm),
+				fail: () => resolve(false)
+			})
+		})
+	}
+
+	async function toggleAutoRun() {
+		try {
+			// 已在跑 → 暂停
+			if (isAutoRunRunning()) {
+				stopAutoRunFn()
+				autoRunLabel.value = '继续跑图'
 				return
 			}
-		}
 
-		// ★ 启动前再检查一次，避免竞态
-		if (isAutoRunRunning()) {
-			return
-		}
+			const progress = getAutoRunProgress()
+			const isFreshStart = progress.current === 0
 
-		autoRunLabel.value = '暂停跑图'
-
-		await startAutoRun({
-			intervalSec: autoRunInterval.value,
-			reset: false,
-			onStep: (idx, total) => {
-				console.log(`[自动跑图] ${idx + 1}/${total}`)
-			},
-			onFinish: () => {
-				autoRunLabel.value = '开始跑图'
-				uni.showToast({
-					icon: 'none',
-					title: '跑图完成'
-				})
+			// ★ 首次启动弹窗确认（用 showModal）
+			if (isFreshStart) {
+				isPrompting = true
+				let confirmed = false
+				try {
+					confirmed = await confirmStartAutoRun()
+				} finally {
+					isPrompting = false
+				}
+				if (!confirmed) {
+					// 用户取消，什么都不做
+					return
+				}
 			}
-		})
-	} catch (e) {
-		console.error('[toggleAutoRun] 错误:', e)
+
+			// ★ 启动前再检查一次，避免竞态
+			if (isAutoRunRunning()) {
+				return
+			}
+
+			autoRunLabel.value = '暂停跑图'
+
+			await startAutoRun({
+				intervalSec: autoRunInterval.value,
+				reset: false,
+				onStep: (idx, total) => {
+					console.log(`[自动跑图] ${idx + 1}/${total}`)
+				},
+				onFinish: () => {
+					autoRunLabel.value = '开始跑图'
+					uni.showToast({
+						icon: 'none',
+						title: '跑图完成'
+					})
+				}
+			})
+		} catch (e) {
+			console.error('[toggleAutoRun] 错误:', e)
+			autoRunLabel.value = '开始跑图'
+			uni.showToast({
+				icon: 'none',
+				title: '启动失败: ' + (e && e.message ? e.message : String(e)),
+				duration: 3000
+			})
+		}
+	}
+
+	function stopAutoRun() {
+		stopAutoRunFn()
+		resetAutoRunIndex()
 		autoRunLabel.value = '开始跑图'
 		uni.showToast({
 			icon: 'none',
-			title: '启动失败: ' + (e && e.message ? e.message : String(e)),
-			duration: 3000
+			title: '已停止'
 		})
 	}
-}
 
-function stopAutoRun() {
-	stopAutoRunFn()
-	resetAutoRunIndex()
-	autoRunLabel.value = '开始跑图'
-	uni.showToast({
-		icon: 'none',
-		title: '已停止'
-	})
-}
+	async function toggleLockHeight() {
+		if (isLockHeightRunning()) {
+			// 关闭
+			stopLockHeight()
+			lockHeightLabel.value = '锁定高度'
+			uni.showToast({
+				icon: 'none',
+				title: '已关闭锁定'
+			})
+			return
+		}
 
-async function toggleLockHeight() {
-	if (isLockHeightRunning()) {
-		// 关闭
-		stopLockHeight()
-		lockHeightLabel.value = '锁定高度'
-		uni.showToast({
-			icon: 'none',
-			title: '已关闭锁定'
-		})
-		return
+		// 开启：询问高度
+		const input = prompt(
+			'输入需要锁定的高度(F32)\n水试炼推荐70  火/风120  土130',
+			'70'
+		)
+		if (input === null || input === '') return
+		const v = parseFloat(input)
+		if (!Number.isFinite(v)) {
+			uni.showToast({
+				icon: 'none',
+				title: '请输入有效数字'
+			})
+			return
+		}
+
+		const ok = await startLockHeight(v)
+		if (ok) {
+			lockHeightLabel.value = `锁定中 ${v}`
+			uni.showToast({
+				icon: 'success',
+				title: `已锁定 ${v}`
+			})
+		} else {
+			lockHeightLabel.value = '锁定高度'
+			uni.showToast({
+				icon: 'none',
+				title: '锁定失败'
+			})
+		}
 	}
-
-	// 开启：询问高度
-	const input = prompt(
-		'输入需要锁定的高度(F32)\n水试炼推荐70  火/风120  土130',
-		'70'
-	)
-	if (input === null || input === '') return
-	const v = parseFloat(input)
-	if (!Number.isFinite(v)) {
-		uni.showToast({
-			icon: 'none',
-			title: '请输入有效数字'
-		})
-		return
-	}
-
-	const ok = await startLockHeight(v)
-	if (ok) {
-		lockHeightLabel.value = `锁定中 ${v}`
-		uni.showToast({
-			icon: 'success',
-			title: `已锁定 ${v}`
-		})
-	} else {
-		lockHeightLabel.value = '锁定高度'
-		uni.showToast({
-			icon: 'none',
-			title: '锁定失败'
-		})
-	}
-}
-
-// ===== 生命周期 =====
-onMounted(() => {
-	autoRunLabel.value = '开始跑图'
-
-	// 轮询坐标（500ms）
-	startCoordLoop((c) => {
-		coord.x = c.x
-		coord.z = c.z
-		coord.y = c.y
-	}, 500)
-})
-
-onUnmounted(() => {
-	stopCoordLoop()
-
-	// ★ 弹窗中不主动停跑图，避免误停
-	if (!isPrompting) {
-		stopAutoRunFn()
-	}
-
-	stopEnergyLoop()
-	stopSpeedLoop()
-	stopBurnLoop()
-	stopBloomLoop()
-	stopLockHeight()
-	clearCandleAddr()
-	clearLockHeightAddr()
-})
 </script>
 
 <style scoped>
-.sky-task-block {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	min-height: 42px;
-}
+	.sky-task-block {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		min-height: 42px;
+	}
 
-.slider-wrap {
-	display: flex;
-	align-items: center;
-	width: 100%;
-	flex: 3;
-}
+	.slider-wrap {
+		display: flex;
+		align-items: center;
+		width: 100%;
+		flex: 3;
+	}
 
-.speed-slider {
-	flex: 1;
-	margin: 0;
-}
+	.speed-slider {
+		flex: 1;
+		margin: 0;
+	}
 
-.speed-label {
-	min-width: 48px;
-	text-align: right;
-	color: #1e2a2e;
-	font-size: 12px;
-	font-weight: 600;
-	font-family: monospace;
-}
+	.speed-label {
+		min-width: 48px;
+		text-align: right;
+		color: #1e2a2e;
+		font-size: 12px;
+		font-weight: 600;
+		font-family: monospace;
+	}
 </style>

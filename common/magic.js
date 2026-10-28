@@ -94,24 +94,24 @@ export function initMagic() {
 		// ---------- 2. 搜索卡槽数量地址 ----------
 		h5gg.clearResults()
 		// h5gg.searchNumber('2035109393', 'I32', SEARCH_FROM, SEARCH_TO)
-		h5gg.searchNumber('24504', 'I16', SEARCH_FROM, SEARCH_TO)
+		h5gg.searchNumber('96', 'I16', SEARCH_FROM, SEARCH_TO)
 		h5gg.searchNearby('307', 'I32', '0x100')
 		h5gg.searchNumber('307', 'I32', SEARCH_FROM, SEARCH_TO)
 
 		const cnt = h5gg.getResultsCount()
-		console.log('卡槽数量候选搜索结果：', cnt)
+		// console.log('卡槽数量候选搜索结果：', cnt)
 		if (cnt > 0) {
 			const res = h5gg.getResults(cnt)
-			// console.log('卡槽数量地址：', res.map(r => r.address))
+			// console.log('卡槽数量地址：', ...res.map(r => r.address))
 			// console.log('卡槽数量地址：', ...res)
 			for (let j = 0; j < res.length; j++) {
 				const addr307 = Number(res[j].address)
 				const verifyAddr = addr307 - 88 // 往上偏移88字节
-				console.log('验证地址：', Number(h5gg.getValue('0x' + verifyAddr.toString(16), 'I32')))
+				// console.log('验证地址：', Number(h5gg.getValue('0x' + verifyAddr.toString(16), 'I32')))
 				try {
 					if (Number(h5gg.getValue('0x' + verifyAddr.toString(16), 'I32')) === 0) {
 						magicCountAddr = verifyAddr
-						console.log('卡槽数量地址：', magicCountAddr)
+						// console.log('卡槽数量地址：', '0x'+magicCountAddr.toString(16))
 						break
 					}
 				} catch (e) { }
