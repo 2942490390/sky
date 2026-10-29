@@ -473,7 +473,8 @@ import {
 // ★ 新增：从 magicData_all.js 导入数据
 import {
 	MAGIC_SLOT_TITLES,
-	MAGIC_ITEMS
+	MAGIC_ITEMS,
+	MAGIC_ITEMS_Length
 } from '../common/magicData_all.js'
 
 
@@ -529,7 +530,7 @@ const magicReady = ref(false)
 const magicInitLoading = ref(false)
 const magicTab = ref('func')   // 'func' | 'addr'
 
-const SLOT_TOTAL = MAGIC_SLOT_TITLES.length   // 9
+const SLOT_TOTAL = MAGIC_ITEMS_Length   // 9
 
 const magicState = reactive({
 	1: null, 2: null, 3: null, 4: null,

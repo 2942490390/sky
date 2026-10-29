@@ -115,7 +115,7 @@
 						<view class="tag-alias-row">
 							<text class="alias-label">别名：</text>
 							<input class="alias-input" :value="tag.alias" placeholder="点击设置别名"
-								@change="(e) => setAlias(tag.key, e)" />
+								@input="(e) => setAlias(tag.key, e)" />
 						</view>
 						<view class="tag-meta">
 							<text class="tag-time">保存于 {{ formatTime(tag.time) }}</text>
@@ -682,19 +682,27 @@ function persistTagList() {
 }
 
 function openLocalModal() {
+	// 先确保内存数据已落盘，避免 load 覆盖刚改的
+	persistTagList()
 	loadTagList()
 	localModalVisible.value = true
 }
-
 function closeLocalModal() { localModalVisible.value = false }
 
 function setAlias(key, e) {
-	const val = (e.target && e.target.value !== undefined) ? e.target.value : (e.detail?.value || '')
+	// 兼容 H5 / uni-app / 小程序
+	let val = ''
+	if (e) {
+		if (typeof e === 'string') val = e
+		else if (e.target && e.target.value !== undefined) val = e.target.value
+		else if (e.detail && e.detail.value !== undefined) val = e.detail.value
+		else if (e.value !== undefined) val = e.value
+	}
 	const tag = savedTagList.value.find(t => t.key === key)
 	if (tag) {
 		tag.alias = String(val || '').trim()
 		persistTagList()
-		uni.showToast({ title: '别名已更新', icon: 'success', duration: 1000 })
+		// 不要每次 input 都弹 toast，太吵，可去掉或 debounce
 	}
 }
 

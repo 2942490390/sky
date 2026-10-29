@@ -339,7 +339,6 @@ export const MAGIC_ITEMS = {
         { name: '锦鲤斗篷', id: 573237039 },
         { name: '绿芽斗篷', id: 2079599063 },
         { name: 'TGC斗篷', id: 540856305 },
-        { name: '蛛丝斗篷', id: 930203946 },
         { name: '圣诞斗篷', id: 1306675982 },
         { name: '春之斗篷', id: -445538750 },
         { name: '樱花斗篷', id: 162066154 },
@@ -456,7 +455,7 @@ export const MAGIC_ITEMS = {
     // ================= 槽7 · 效果 =================
     7: [
         // ---- 法术.txt · 效果 ----
-        { name: 'TGC光辉', id: 1938335753 },
+        { name: '璀璨之星-蓝', id: 1938335753 },
         { name: '巨大生长药水', id: -171942070 },
         { name: '花憩玫瑰尾迹', id: 844795261 },
         { name: '货币戏法', id: 549388738 },
@@ -615,3 +614,5 @@ export const MAGIC_ITEMS = {
         { name: '光之子手办SE传送', id: -1766441122 }
     ]
 }
+
+export const MAGIC_ITEMS_Length = Object.keys(MAGIC_ITEMS).length
