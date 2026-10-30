@@ -4,7 +4,7 @@
 		<view class="glass-panel">
 			<!-- 内层：真正面板，负责"尺寸 + 缩放 + 视觉" -->
 			<view class="glass-inner" :style="{ transform: `scale(${scaleValue})` }">
-				<i @click="onReloadClick" class="fa-regular fa-circle-xmark reload-icon"
+				<i ref="reloadIcon" @click="onReloadClick" class="fa-regular fa-circle-xmark reload-icon"
 					:class="{ 'fa-spin': reloading }" />
 				<NavBar :active-index="activeNav" @change="switchPage" />
 				<view class="vertical-divider"></view>
@@ -142,9 +142,6 @@
 		scaleValue.value = val / 100
 	}
 
-	// const switchPage = (index) => {
-	// 	activeNav.value = index
-	// }
 
 	const reloading = ref(false)
 
@@ -160,12 +157,13 @@
 
 <style scoped>
 	.reload-icon {
+		display: none;
 		position: absolute;
 		z-index: 99999;
 		top: 2px;
-		right: 1px;
+		left: 1px;
 		color: #fff;
-		display: inline-block;
+		/* display: inline-block; */
 		width: 20px;
 		height: 20px;
 		line-height: 20px;

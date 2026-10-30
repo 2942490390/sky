@@ -23,7 +23,7 @@
 		</view>
 
 		<!-- ★ 跑图间隔滑块 -->
-		<view class="sky-task sky-task-block">
+		<view class="sky-task">
 			<view class="task-left">
 				<text class="fa-solid fa-clock"></text>
 				<text>跑图间隔</text>
@@ -37,7 +37,7 @@
 		</view>
 
 		<!-- 全局加速 -->
-		<view class="sky-task sky-task-block">
+		<view class="sky-task">
 			<view class="task-left">
 				<text class="fa-solid fa-gauge-high"></text>
 				<text>全局加速</text>
@@ -439,12 +439,6 @@
 </script>
 
 <style scoped>
-	.sky-task-block {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		min-height: 42px;
-	}
 
 	.slider-wrap {
 		display: flex;

@@ -509,7 +509,7 @@ uni-toast,
 	clip-path: inset(0 round 13px);
 	width: var(--panel-w, 596px);
 	height: var(--panel-h, 372px);
-	padding: 10px;
+	padding: 6px;
 	background: #1a1a2e;
 	box-sizing: border-box;
 	position: relative;
@@ -700,7 +700,7 @@ html.sky-hit-test-repair .glass-inner * {
 	flex: 1;
 	overflow-y: auto;
 	overflow-x: hidden;
-	padding: 6px 10px;
+	padding: 6px;
 	position: relative;
 	left: auto;
 	top: auto;
@@ -742,13 +742,13 @@ html.sky-hit-test-repair .glass-inner * {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 4px;
+	padding: 2px;
 	background: rgba(255, 255, 255, 0.25);
 	backdrop-filter: blur(8px);
 	border: 1px solid rgba(255, 255, 255, 0.4);
 	border-radius: 16px;
 	color: #2c2c2c;
-	font-size: 14px;
+	font-size: 12px !important;
 	font-weight: 500;
 	transition: all 0.2s ease;
 }
@@ -756,7 +756,7 @@ html.sky-hit-test-repair .glass-inner * {
 .task-left {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: 5px;
 	color: #1e2a2e;
 	flex: 1;
 }
@@ -766,11 +766,12 @@ html.sky-hit-test-repair .glass-inner * {
 	border: none;
 	border-radius: 40px;
 	color: #4a3b1f;
-	font-weight: 600;
-	font-size: 11px;
+	font-weight: inherit;
+	font-size: inherit;
 	cursor: pointer;
 	transition: 0.15s ease;
 	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+	line-height: 2;
 }
 
 .sky-btn:active {
