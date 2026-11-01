@@ -5,7 +5,7 @@ import { writeSafe } from './h5gg.js'
 const NLD_FEATURE_VALUE = '0.544388'
 const NLD_SEARCH_FROM = '0x120000000'
 const NLD_SEARCH_TO = '0x1600000000'
-const NLD_PLAYER_STEP = 0x2B8E0
+const NLD_PLAYER_STEP = 0x2C530 // 步长
 const NLD_OFFSET_MAIN = 0xE8      // 能量盾
 const NLD_OFFSET_OTHER = 0x120    // 它人视角炸盾
 const NLD_OFFSET_SELF = 276       // 自身视角炸盾（0x114）
