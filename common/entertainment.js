@@ -2,7 +2,10 @@
 // 娱乐功能独立模块（从 demo10 移植，统一用递归 setTimeout 防止崩溃）
 // 依赖：h5gg.js 的 getPtr / getModuleAddr
 
-import { getPtr, getModuleAddr } from './h5gg.js'
+import {
+	getPtr,
+	getModuleAddr
+} from './h5gg.js'
 
 // ============================================================
 // 内部工具
@@ -29,7 +32,13 @@ function safeWrite(addr, value, type) {
 }
 
 function toast(msg) {
-	try { uni.showToast({ icon: 'none', title: String(msg), duration: 1500 }) } catch (e) {}
+	try {
+		uni.showToast({
+			icon: 'none',
+			title: String(msg),
+			duration: 1500
+		})
+	} catch (e) {}
 }
 
 // ============================================================
@@ -252,7 +261,9 @@ export function energyLoopV2(checked) {
 	if (checked) _energy.start()
 	else _energy.stop()
 }
-export function stopEnergyLoopV2() { _energy.stop() }
+export function stopEnergyLoopV2() {
+	_energy.stop()
+}
 
 // ---------- 隐身（F32=0）—— 指针链 ----------
 const _invisible = createWriteLoop({
@@ -266,7 +277,9 @@ export function invisibleLoop(checked) {
 	if (checked) _invisible.start()
 	else _invisible.stop()
 }
-export function stopInvisibleLoop() { _invisible.stop() }
+export function stopInvisibleLoop() {
+	_invisible.stop()
+}
 
 // ---------- 守护无翼（I32=0）—— 指针链 ----------
 const _noWing = createWriteLoop({
@@ -280,7 +293,9 @@ export function noWingGuardLoop(checked) {
 	if (checked) _noWing.start()
 	else _noWing.stop()
 }
-export function stopNoWingGuardLoop() { _noWing.stop() }
+export function stopNoWingGuardLoop() {
+	_noWing.stop()
+}
 
 // ---------- 无视冥龙（I32=0）—— dj() 直接地址 ----------
 const _krill = createWriteLoop({
@@ -294,7 +309,9 @@ export function ignoreKrillLoop(checked) {
 	if (checked) _krill.start()
 	else _krill.stop()
 }
-export function stopIgnoreKrillLoop() { _krill.stop() }
+export function stopIgnoreKrillLoop() {
+	_krill.stop()
+}
 
 // ---------- 防举报（I32=257）—— dj() 直接地址 ----------
 const _antiReport = createWriteLoop({
@@ -308,7 +325,9 @@ export function antiReportLoop(checked) {
 	if (checked) _antiReport.start()
 	else _antiReport.stop()
 }
-export function stopAntiReportLoop() { _antiReport.stop() }
+export function stopAntiReportLoop() {
+	_antiReport.stop()
+}
 
 // ---------- 解锁好友树（I32=256）—— dj() 直接地址 ----------
 const _friendTree = createWriteLoop({
@@ -322,7 +341,9 @@ export function friendTreeLoop(checked) {
 	if (checked) _friendTree.start()
 	else _friendTree.stop()
 }
-export function stopFriendTreeLoop() { _friendTree.stop() }
+export function stopFriendTreeLoop() {
+	_friendTree.stop()
+}
 
 // ---------- 燃烧弹（1591 项 × 464 字节，每项 F32=1）—— 指针链 ----------
 const _ignite = createBatchLoop({
@@ -331,7 +352,7 @@ const _ignite = createBatchLoop({
 	type: 'F32',
 	total: 1591,
 	step: 464,
-	slice: 32,       // 每 tick 32 个，比 demo10 的 64 更稳
+	slice: 32, // 每 tick 32 个，比 demo10 的 64 更稳
 	interval: 120,
 	onFail: () => toast('燃烧弹：地址未找到')
 })
@@ -339,7 +360,9 @@ export function igniteLoop(checked) {
 	if (checked) _ignite.start()
 	else _ignite.stop()
 }
-export function stopIgniteLoop() { _ignite.stop() }
+export function stopIgniteLoop() {
+	_ignite.stop()
+}
 
 // ---------- 去风墙（60 项 × 2096 字节，每项 F32=0）—— 指针链 ----------
 const _wall = createBatchLoop({
@@ -356,7 +379,9 @@ export function wallLoop(checked) {
 	if (checked) _wall.start()
 	else _wall.stop()
 }
-export function stopWallLoop() { _wall.stop() }
+export function stopWallLoop() {
+	_wall.stop()
+}
 
 // ---------- 跳过动画（即时写，不循环）—— dj() 直接地址 ----------
 export async function setSkipAnim(on) {
@@ -404,7 +429,10 @@ let _offlineTimer = null
 let _offlineOn = false
 
 export async function globalOffline(on) {
-	if (_offlineTimer) { clearTimeout(_offlineTimer); _offlineTimer = null }
+	if (_offlineTimer) {
+		clearTimeout(_offlineTimer)
+		_offlineTimer = null
+	}
 	_offlineOn = !!on
 
 	if (!_offlineAddr) {
@@ -437,7 +465,10 @@ export async function globalOffline(on) {
 }
 
 export function stopGlobalOffline() {
-	if (_offlineTimer) { clearTimeout(_offlineTimer); _offlineTimer = null }
+	if (_offlineTimer) {
+		clearTimeout(_offlineTimer)
+		_offlineTimer = null
+	}
 	_offlineOn = false
 }
 

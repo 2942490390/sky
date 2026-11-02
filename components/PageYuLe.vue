@@ -75,13 +75,13 @@
 		</view>
 
 		<!-- 无限道具 -->
-		<view class="sky-task">
+<!-- 		<view class="sky-task">
 			<view class="task-left">
 				<text class="fa-solid fa-infinity"></text>
 				<text>无限道具</text>
 			</view>
 			<switch :checked="swState.wxdj" color="#FFD966" style="transform: scale(0.75);" @change="wxdj" />
-		</view>
+		</view> -->
 		<!-- 无限烟花 -->
 		<view class="sky-task">
 			<view class="task-left">

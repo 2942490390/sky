@@ -7,7 +7,7 @@
 				<view class="mini-btn add" @click="addRow">+ 新增</view>
 				<view class="mini-btn reset" @click="onReset">恢复默认</view>
 				<view class="mini-btn copy" @click="onCopy">复制JS</view>
-				<view class="mini-btn import" @click="openImport">导入指针</view>
+				<!-- <view class="mini-btn import" @click="openImport">导入指针</view> -->
 			</view>
 		</view>
 

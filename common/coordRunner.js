@@ -1,15 +1,20 @@
 // common/coordRunner.js
-import { getPtr, readHexU32 } from './h5gg.js'
-import { AUTO_RUN_POINTS } from './autoRunPoints.js'
+import {
+	getPtr,
+	readHexU32
+} from './h5gg.js'
+import {
+	AUTO_RUN_POINTS
+} from './autoRunPoints.js'
 
 // ================= 缓存状态 =================
 let coordTimer = null
 let coordCallback = null
-let coordLoopRunning = false          // ★ 新增：循环运行标志
+let coordLoopRunning = false // ★ 新增：循环运行标志
 
-let cachedXAddr = 0                    // x 的地址（z = +4, y = +8）
-let cachedFlagAddr = 0                 // 特征值地址
-let cachedKey35Addr = 0                // 特征值 -188 处必须是 35
+let cachedXAddr = 0 // x 的地址（z = +4, y = +8）
+let cachedFlagAddr = 0 // 特征值地址
+let cachedKey35Addr = 0 // 特征值 -188 处必须是 35
 
 const FEATURE_VAL = -1061397986
 const CHECK_35 = 35
@@ -37,7 +42,11 @@ function readFromCache() {
 		const z = Number(h5gg.getValue('0x' + (cachedXAddr + 4).toString(16), 'F32'))
 		const y = Number(h5gg.getValue('0x' + (cachedXAddr + 8).toString(16), 'F32'))
 		if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(y)) return null
-		return { x, z, y }
+		return {
+			x,
+			z,
+			y
+		}
 	} catch (e) {
 		return null
 	}
@@ -48,7 +57,9 @@ async function readByPtrAndCache() {
 	let xAddr
 	try {
 		xAddr = await getPtr('rwdz')
-	} catch { return null }
+	} catch {
+		return null
+	}
 	if (!xAddr) return null
 
 	try {
@@ -61,8 +72,14 @@ async function readByPtrAndCache() {
 		cachedXAddr = xAddr
 		cachedFlagAddr = xAddr + 148
 		cachedKey35Addr = xAddr - 40
-		return { x, z, y }
-	} catch { return null }
+		return {
+			x,
+			z,
+			y
+		}
+	} catch {
+		return null
+	}
 }
 
 // ================= 坐标读取 =================
@@ -75,7 +92,7 @@ export async function readCoordOnce() {
 	const cached = readFromCache()
 	if (cached) return cached
 
-	const fresh = await readByPtrAndCache()  // 首次 / 缓存失效才走这里
+	const fresh = await readByPtrAndCache() // 首次 / 缓存失效才走这里
 	if (fresh) return fresh
 
 	// 都失败，清缓存，下次重新来
@@ -170,8 +187,13 @@ export async function startAutoRun(opts = {}) {
 	if (autoRunStarting) return
 	autoRunStarting = true
 	try {
-		const { intervalSec = 3.8, reset = false, onStep, onFinish } = opts
-		if (autoRunTimer) { clearTimeout(autoRunTimer); autoRunTimer = null }
+		const {
+			intervalSec = 3.8, reset = false, onStep, onFinish
+		} = opts
+		if (autoRunTimer) {
+			clearTimeout(autoRunTimer)
+			autoRunTimer = null
+		}
 		if (reset) autoRunIndex = 0
 		autoRunIntervalSec = Number.isFinite(intervalSec) && intervalSec >= 0 ? intervalSec : 3.0
 		autoRunRunning = true
@@ -181,13 +203,17 @@ export async function startAutoRun(opts = {}) {
 			try {
 				if (autoRunIndex >= AUTO_RUN_POINTS.length) {
 					stopAutoRun()
-					try { onFinish && onFinish() } catch (e) {}
+					try {
+						onFinish && onFinish()
+					} catch (e) {}
 					return
 				}
 				const p = AUTO_RUN_POINTS[autoRunIndex]
 				await teleportTo(p[0], p[1], p[2])
 				if (!autoRunRunning) return
-				try { onStep && onStep(autoRunIndex, AUTO_RUN_POINTS.length) } catch (e) {}
+				try {
+					onStep && onStep(autoRunIndex, AUTO_RUN_POINTS.length)
+				} catch (e) {}
 				autoRunIndex++
 			} catch (e) {
 				console.error('[coordRunner] step 异常:', e)
@@ -203,12 +229,22 @@ export async function startAutoRun(opts = {}) {
 
 export function stopAutoRun() {
 	autoRunRunning = false
-	if (autoRunTimer) { clearTimeout(autoRunTimer); autoRunTimer = null }
+	if (autoRunTimer) {
+		clearTimeout(autoRunTimer)
+		autoRunTimer = null
+	}
 }
-export function resetAutoRunIndex() { autoRunIndex = 0 }
-export function isAutoRunRunning() { return autoRunRunning }
+export function resetAutoRunIndex() {
+	autoRunIndex = 0
+}
+export function isAutoRunRunning() {
+	return autoRunRunning
+}
 export function getAutoRunProgress() {
-	return { current: autoRunIndex, total: AUTO_RUN_POINTS.length }
+	return {
+		current: autoRunIndex,
+		total: AUTO_RUN_POINTS.length
+	}
 }
 export function resetAutoRunModule() {
 	stopAutoRun()
