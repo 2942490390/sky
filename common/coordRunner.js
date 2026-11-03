@@ -15,11 +15,7 @@ let coordLoopRunning = false // ★ 新增：循环运行标志
 let cachedXAddr = 0 // x 的地址（z = +4, y = +8）
 let cachedFlagAddr = 0 // 特征值地址
 let cachedKey35Addr = 0 // 特征值 -188 处必须是 35
-
-const FEATURE_VAL = -1061397986
 const CHECK_35 = 35
-const SEARCH_RANGE_MIN = '0x120000000'
-const SEARCH_RANGE_MAX = '0x200000000'
 
 export function invalidateRwdzCache() {
 	cachedXAddr = 0

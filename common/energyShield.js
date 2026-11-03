@@ -3,7 +3,7 @@
 import { writeSafe } from './h5gg.js'
 // ================= 常量 =================
 const NLD_FEATURE_VALUE = '0.544388'
-const NLD_SEARCH_FROM = '0x120000000'
+const NLD_SEARCH_FROM = '0x130000000'
 const NLD_SEARCH_TO = '0x1600000000'
 const NLD_PLAYER_STEP = 0x2C530 // 步长
 const NLD_OFFSET_MAIN = 0xE8      // 能量盾

@@ -1,4 +1,4 @@
-// common/magicData.js
+// common/magicData_all.js
 // 特征魔法数据（统一管理，供 PageYuLe.vue 使用）
 // 整合自：法术.txt / 部分魔法.txt
 // 全部名称为中文，id 为 I32（有正有负，原样保留）

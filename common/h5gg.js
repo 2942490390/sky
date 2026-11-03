@@ -476,7 +476,7 @@ let bloomState = {
 
 export async function burnLoop(enabled) {
 	if (burnTimer) {
-		clearTimeout(burnTimer);
+		clearTimeout(burnTimer)
 		burnTimer = null
 	}
 

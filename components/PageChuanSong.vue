@@ -85,6 +85,6 @@ function backToMainMap() {
 .map-list {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
+	gap: 6px;
 }
 </style>

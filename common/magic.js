@@ -3,7 +3,7 @@
 import { writeSafe } from './h5gg.js'
 import { MAGIC_ITEMS_Length } from './magicData_all.js'
 // ================= 常量 =================
-const SEARCH_FROM = '0x120000000'
+const SEARCH_FROM = '0x130000000'
 const SEARCH_TO = '0x200000000'
 
 // 槽位偏移
@@ -137,12 +137,12 @@ export function initMagic() {
 		// ---------- 2. 搜索卡槽数量地址 ----------
 		h5gg.clearResults()
 		// h5gg.searchNumber('2035109393', 'I32', SEARCH_FROM, SEARCH_TO)
-		h5gg.searchNumber('24504', 'I16', SEARCH_FROM, SEARCH_TO)
-		h5gg.searchNumber('24504', 'I16', SEARCH_FROM, SEARCH_TO)
-		// h5gg.searchNumber('96', 'I16', SEARCH_FROM, SEARCH_TO)
-		h5gg.searchNearby('307', 'I32', '0x100')
+		// h5gg.searchNumber('24504', 'I16', SEARCH_FROM, SEARCH_TO)
+		// h5gg.searchNumber('24504', 'I16', SEARCH_FROM, SEARCH_TO)
+		h5gg.searchNumber('0.0078125', 'F64', SEARCH_FROM, SEARCH_TO)
+		h5gg.searchNearby('307', 'I64', '0x100')
 		// h5gg.searchNearby('1065353216', 'I32', '0x100')
-		h5gg.searchNumber('307', 'I32', SEARCH_FROM, SEARCH_TO)
+		h5gg.searchNumber('307', 'I64', SEARCH_FROM, SEARCH_TO)
 
 		const cnt = h5gg.getResultsCount()
 		if (cnt === 0) {
@@ -160,18 +160,19 @@ export function initMagic() {
 				const resAddrup24 = addr307 - 24 // 往上偏移24字节 1065353216 特征码
 				const resAddr28 = addr307 - 28 // 往上偏移28字节 0.0078125 特征码
 				const resAddr4 = addr307 - 4 // 往上偏移4字节 1318554959873 特征码
-				// console.log('验证地址：', Number(h5gg.getValue('0x' + verifyAddr.toString(16), 'I32')))
-
 				try {
 					if (Number(h5gg.getValue('0x' + resAddrup24.toString(16), 'I32')) === 1065353216
-						&& Number(h5gg.getValue('0x' + resAddr28.toString(16), 'F64')) ===  0.0078125
-						&& Number(h5gg.getValue('0x' + resAddr4.toString(16), 'I64')) ===  1318554959873n
+						&& Number(h5gg.getValue('0x' + resAddr28.toString(16), 'F64')) === 0.0078125
+						&& Number(h5gg.getValue('0x' + resAddr4.toString(16), 'I64')) === 1318554959873
 					) {
 						magicCountAddr = verifyAddr
 						// console.log('卡槽数量地址：', '0x' + magicCountAddr.toString(16))
 						break
 					}
-				} catch (e) { }
+				} catch (e) {
+					h5gg.clearResults()
+					return false
+				}
 			}
 		}
 		h5gg.clearResults()
