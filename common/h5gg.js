@@ -14,14 +14,14 @@ if (typeof h5gg === 'undefined') {
 	globalThis.h5gg = {
 		getRangesList: () => [],
 		getValue: () => 0,
-		setValue: () => {},
-		clearResults: () => {},
-		searchNumber: () => {},
-		searchNearby: () => {},
-		editAll: () => {},
+		setValue: () => { },
+		clearResults: () => { },
+		searchNumber: () => { },
+		searchNearby: () => { },
+		editAll: () => { },
 		getResults: () => [],
 		getResultsCount: () => 0,
-		require: () => {}
+		require: () => { }
 	}
 	uni.showToast({
 		icon: 'none',
@@ -60,7 +60,7 @@ function getMain() {
 	let list = null
 	try {
 		list = h5gg.getRangesList('Sky-iOS-Gold')
-	} catch (e) {}
+	} catch (e) { }
 
 	if (!list || list.length === 0) {
 		try {
@@ -71,7 +71,7 @@ function getMain() {
 					break
 				}
 			}
-		} catch (e) {}
+		} catch (e) { }
 	}
 
 	if (list && list.length > 0) {
@@ -516,7 +516,7 @@ export async function burnLoop(enabled) {
 		for (let j = start; j < end; j++) {
 			try {
 				h5gg.setValue(burnAddr + BURN_STEP * j, 1, 'F32')
-			} catch (e) {}
+			} catch (e) { }
 		}
 		burnState.index = (end >= BURN_MAX) ? 0 : end
 	}
@@ -555,7 +555,7 @@ function searchBurnAddr() {
 	} catch (e) {
 		try {
 			h5gg.clearResults()
-		} catch (_) {}
+		} catch (_) { }
 		return false
 	}
 }
@@ -565,49 +565,37 @@ function searchBurnAddr() {
 let zrzhBaseAddr = 0
 
 function searchOneZhahua() {
-	return new Promise(function(resolve) {
-		setTimeout(function() {
-			try {
-				zrzhBaseAddr = 0
-				h5gg.clearResults()
-				h5gg.searchNumber('1133903872', 'I32', '0x120000000', '0x200000000')
-				h5gg.searchNumber('1133903872', 'I32', '0x120000000', '0x200000000')
-				const cnt = h5gg.getResultsCount()
-				if (cnt === 0) {
-					h5gg.clearResults()
-					resolve(0)
-					return
-				}
-
-				const maxCheck = cnt > 200 ? 200 : cnt
-				const batch = h5gg.getResults(maxCheck, 0)
-				if (!batch) {
-					h5gg.clearResults()
-					resolve(0)
-					return
-				}
-
-				for (let i = 0; i < batch.length; i++) {
-					const addrNum = Number(batch[i].address)
-					const v4 = Number(h5gg.getValue(addrNum - 4, 'I32'))
-					const v8 = Number(h5gg.getValue(addrNum - 8, 'I64'))
-					if (v4 === 3 && v8 === 12884901888) {
-						zrzhBaseAddr = addrNum + 8
-						h5gg.clearResults()
-						resolve(zrzhBaseAddr)
-						return
-					}
-				}
-				h5gg.clearResults()
-				resolve(0)
-			} catch (e) {
-				try {
-					h5gg.clearResults()
-				} catch (_) {}
-				resolve(0)
+	try {
+		h5gg.clearResults()
+		h5gg.searchNumber('1133903872', 'I32', '0x130000000', '0x170000000')
+		h5gg.searchNumber('1133903872', 'I32', '0x130000000', '0x170000000')
+		h5gg.searchNearby('12884901888', 'I64', '0x8')
+		h5gg.searchNumber('12884901888', 'I64', '0x130000000', '0x170000000')
+		const cnt = h5gg.getResultsCount()
+		if (cnt === 0) {
+			h5gg.clearResults()
+			return false
+		}
+		const results = h5gg.getResults(cnt)
+		if (!results || results.length === 0) {
+			h5gg.clearResults()
+			return false
+		}
+		for (let i = 0; i < results.length; i++) {
+			const addrNum = Number(results[i].address)
+			const v4 = Number(h5gg.getValue(addrNum + 4, 'I32'))
+			const v8 = Number(h5gg.getValue(addrNum + 8, 'I64'))
+			const v1420 = Number(h5gg.getValue(addrNum + 1420, 'F64'))
+			if (v4 === 3 && v8 === 1133903872 && v1420 === 0.0078125) {
+				zrzhBaseAddr = addrNum + 16
+				return zrzhBaseAddr
 			}
-		}, 50)
-	})
+		}
+		h5gg.clearResults()
+		return
+	} catch (e) {
+		return false
+	}
 }
 
 let bloomGen = 0
@@ -629,7 +617,7 @@ export async function bloomLoop(enabled) {
 	}
 
 	if (!bloomAddr) {
-		const addr = await searchOneZhahua()
+		const addr = searchOneZhahua()
 		if (gen !== bloomGen) return // 期间被关闭/重启，丢弃
 
 		if (addr > 0) {
@@ -655,7 +643,7 @@ export async function bloomLoop(enabled) {
 		for (let j = start; j < end; j++) {
 			try {
 				h5gg.setValue(bloomAddr + BLOOM_STEP * j, 0, 'F32')
-			} catch (e) {}
+			} catch (e) { }
 		}
 		bloomState.index = (end >= BLOOM_MAX) ? 0 : end
 	}
@@ -727,7 +715,7 @@ async function findCandleBaseAddrs() {
 
 	try {
 		h5gg.clearResults()
-	} catch (e) {}
+	} catch (e) { }
 	try {
 		h5gg.searchNumber('1808480955', 'I32', '0x130000000', '0x180000000')
 	} catch (e) {
@@ -1297,7 +1285,7 @@ export async function executeWarp(targetMapId, targetZhName) {
 	} catch (e) {
 		try {
 			writeSafe(await findWarpCsdz(), strToHexLE('CandleSpace'), 'U32')
-		} catch (_) {}
+		} catch (_) { }
 		stopSpeedLoop()
 		uni.showToast({
 			icon: 'none',

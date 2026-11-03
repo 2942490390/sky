@@ -136,13 +136,19 @@ export function initMagic() {
 
 		// ---------- 2. 搜索卡槽数量地址 ----------
 		h5gg.clearResults()
-		h5gg.searchNumber('2035109393', 'I32', SEARCH_FROM, SEARCH_TO)
+		// h5gg.searchNumber('2035109393', 'I32', SEARCH_FROM, SEARCH_TO)
+		h5gg.searchNumber('24504', 'I16', SEARCH_FROM, SEARCH_TO)
+		h5gg.searchNumber('24504', 'I16', SEARCH_FROM, SEARCH_TO)
 		// h5gg.searchNumber('96', 'I16', SEARCH_FROM, SEARCH_TO)
 		h5gg.searchNearby('307', 'I32', '0x100')
 		// h5gg.searchNearby('1065353216', 'I32', '0x100')
 		h5gg.searchNumber('307', 'I32', SEARCH_FROM, SEARCH_TO)
 
 		const cnt = h5gg.getResultsCount()
+		if (cnt === 0) {
+			h5gg.clearResults()
+			return false
+		}
 		// console.log('卡槽数量候选搜索结果：', cnt)
 		if (cnt > 0) {
 			const res = h5gg.getResults(cnt)
@@ -150,14 +156,16 @@ export function initMagic() {
 			// console.log('卡槽数量地址：', ...res)
 			for (let j = 0; j < res.length; j++) {
 				const addr307 = Number(res[j].address)
-				const verifyAddr = addr307 - 88 // 往上偏移88字节 魔法卡槽地址
-				const resAddrup24 = addr307 - 24 // 往下偏移24字节 1065353216 特征码
-				const resAddr188 = addr307 + 188 // 往下偏移24字节 2035109393 特征码
+				const verifyAddr = addr307 - 88 // 往上偏移88字节 魔法卡槽数量地址
+				const resAddrup24 = addr307 - 24 // 往上偏移24字节 1065353216 特征码
+				const resAddr28 = addr307 - 28 // 往上偏移28字节 0.0078125 特征码
+				const resAddr4 = addr307 - 4 // 往上偏移4字节 1318554959873 特征码
 				// console.log('验证地址：', Number(h5gg.getValue('0x' + verifyAddr.toString(16), 'I32')))
 
 				try {
 					if (Number(h5gg.getValue('0x' + resAddrup24.toString(16), 'I32')) === 1065353216
-						&& Number(h5gg.getValue('0x' + resAddr188.toString(16), 'I32')) === 2035109393
+						&& Number(h5gg.getValue('0x' + resAddr28.toString(16), 'F64')) ===  0.0078125
+						&& Number(h5gg.getValue('0x' + resAddr4.toString(16), 'I64')) ===  1318554959873n
 					) {
 						magicCountAddr = verifyAddr
 						// console.log('卡槽数量地址：', '0x' + magicCountAddr.toString(16))
@@ -167,7 +175,6 @@ export function initMagic() {
 			}
 		}
 		h5gg.clearResults()
-
 		inited = true
 		return true
 	} catch (e) {
