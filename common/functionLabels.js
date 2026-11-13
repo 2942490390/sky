@@ -14,7 +14,14 @@ export const FUNCTION_LABELS = {
 	zhuahua: '炸花地址',
 	wxyh: '无限烟花',
 	wxmf: '无限魔法',
-	bigjump: '大跳'
+	bigjump: '大跳',
+	fq: '去风墙',
+	ysaring: '隐身',
+	outfit: '烟花槽位',
+	wxyha: '烟花数量',
+	noWingGuard: '守护无翼',
+	autoIgnite: '燃烧弹',
+	offline: '全局离线',
 }
 
 /**

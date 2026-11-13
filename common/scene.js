@@ -1,7 +1,4 @@
 // common/scene.js
-import {
-	getPtr
-} from './h5gg.js'
 
 // ================= 场景亮度地址搜索 =================
 

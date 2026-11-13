@@ -7,7 +7,7 @@
 				<view class="mini-btn add" @click="addRow">+ 新增</view>
 				<view class="mini-btn reset" @click="onReset">恢复默认</view>
 				<view class="mini-btn copy" @click="onCopy">复制JS</view>
-				<!-- <view class="mini-btn import" @click="openImport">导入指针</view> -->
+				<view class="mini-btn import" @click="openImport">导入指针</view>
 			</view>
 		</view>
 
@@ -72,14 +72,16 @@
 		</view>
 
 		<!-- ========== 弹窗：选择要设定的功能 ========== -->
-		<view v-if="showFuncPicker" class="modal-mask" @click.self="closeFuncPicker">
-			<view class="modal-box">
+		<view v-if="showFuncPicker" class="modal-mask" @click="closeFuncPicker">
+			<view class="modal-box" @click.stop>
 				<view class="modal-title">选择要设定的功能</view>
 				<scroll-view class="modal-list" scroll-y>
-					<view v-for="fk in functionKeys" :key="fk.key" class="modal-item"
-						:class="{ active: importTargetKey === fk.key }" @click="onModalItemClick(fk.key)">
-						<text>{{ fk.label }}</text>
-						<text class="modal-item-code">({{ fk.key }})</text>
+					<view class="modal-grid">
+						<view v-for="fk in functionKeys" :key="fk.key" class="modal-item"
+							:class="{ active: importTargetKey === fk.key }" @click="onModalItemClick(fk.key)">
+							<text class="modal-item-label">{{ fk.label }}</text>
+							<text class="modal-item-code">{{ fk.key }}</text>
+						</view>
 					</view>
 				</scroll-view>
 				<view class="modal-footer">
@@ -1154,7 +1156,7 @@ async function applyChainToTarget(c) {
 	background: #FFE28A;
 }
 
-/* ===== 弹窗样式 ===== */
+/* ===== 弹窗 ===== */
 .modal-mask {
 	position: fixed;
 	left: 0;
@@ -1162,62 +1164,124 @@ async function applyChainToTarget(c) {
 	right: 0;
 	bottom: 0;
 	background: rgba(0, 0, 0, 0.45);
-	height: 100vh;
 	display: flex;
-	align-items: flex-start;
+	align-items: center;
+	/* ★ 居中，不是 flex-start */
 	justify-content: center;
 	z-index: 9999;
+	padding: 40px 0;
+	/* 上下留白 */
+	box-sizing: border-box;
 }
 
 .modal-box {
-	width: 90%;
+	width: 92%;
+	max-width: 600px;
+	max-height: 80vh;
+	/* ★ 关键：限制高度 */
 	background: #f2f2f7;
 	border-radius: 14px;
 	display: flex;
 	flex-direction: column;
-	overflow: hidden;
-	padding: 6px;
+	padding: 6px 4px;
 	box-sizing: border-box;
+	gap: 8px;
 }
 
 .modal-title {
 	font-size: 14px;
 	font-weight: 600;
 	color: #1e2a2e;
-	padding: 0;
 	text-align: center;
+	flex-shrink: 0;
 }
 
+/* ★ scroll-view 必须有确定高度才能内部滚动 */
 .modal-list {
 	flex: 1;
 	min-height: 0;
-	border-radius: 10px;
+	/* ★ 关键：允许 flex 子项收缩 */
+	background: transparent;
 }
 
-.modal-item {
+/* ★ 网格容器 */
+.modal-grid {
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 6px;
+	flex-wrap: wrap;
+	/* ★ 横向换行 */
+	gap: 4px;
+	padding: 0px;
+}
+
+/* ★ 3 列：33.33% - gap*2/3，gap=6 时减 4px 留余量 */
+.modal-item {
+	width: calc(33.33% - 4px);
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 2px 4px;
+	/* ★ 内边距缩小 */
+	background: rgba(255, 255, 255, 0.9);
 	border-radius: 8px;
-	font-size: 13px;
+	font-size: 12px;
 	color: #1e2a2e;
+	border: 1.5px solid transparent;
+	transition: background 0.15s, border-color 0.15s;
+	min-height: 18px;
+	/* ★ 3 列空间小，高度略增 */
+	overflow: hidden;
+}
+
+.modal-item:active {
+	background: rgba(255, 217, 102, 0.4);
 }
 
 .modal-item.active {
 	background: #FFD966;
+	border-color: #d4a800;
 	font-weight: 600;
+}
+
+/* ★ 3 列文字缩小，避免溢出 */
+.modal-item-label {
+	font-size: 11px;
+	line-height: 1.25;
+	word-break: break-all;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	/* ★ 最多 2 行，超出省略 */
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	width: 100%;
 }
 
 .modal-item-code {
 	color: #888;
-	font-size: 11px;
-	margin-left: 6px;
+	font-size: 9px;
+	/* ★ 3 列 key 字号更小 */
+	margin-top: 2px;
+	word-break: break-all;
+	width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
+
+/* 底部按钮 */
 .modal-footer {
 	display: flex;
-	align-items: center;
+	gap: 8px;
+	flex-shrink: 0;
+	padding-top: 4px;
+}
+
+.modal-footer .mini-btn {
+	flex: 1;
+	/* ★ 两个按钮平分宽度 */
+	text-align: center;
 }
 
 .paste-box {

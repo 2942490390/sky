@@ -291,7 +291,7 @@ export async function findSpeedAddr() {
 				// 读一下确认地址没失效
 				const test = h5gg.getValue('0x' + speedAddr.toString(16), 'F32')
 				if (test !== undefined && test !== null) {
-					// console.log('[加速] 使用缓存 B = 0x' + speedAddr.toString(16))
+					console.log('[加速] 使用缓存 B = 0x' + speedAddr.toString(16))
 					return speedAddr
 				}
 			} catch (e) {
@@ -316,6 +316,8 @@ export async function findSpeedAddr() {
 		}
 
 		const raw = h5gg.getResults(count) || []
+		console.log('[加速] 搜索结果', ...raw.map(r => r.address))
+
 		const results = []
 		for (let i = 0; i < raw.length; i++) results.push(raw[i])
 
@@ -358,6 +360,7 @@ export async function findSpeedAddr() {
 
 			// 读内存校验 B 处 F32 == 1.0
 			const bAddrHex = '0x' + bAddr.toString(16)
+			console.log('[加速] 校验 B 地址：', bAddrHex)
 			let v1
 			try {
 				v1 = Number(h5gg.getValue(bAddrHex, 'F32'))
@@ -479,52 +482,59 @@ export async function burnLoop(enabled) {
 		clearTimeout(burnTimer)
 		burnTimer = null
 	}
-
 	if (!enabled) {
-		burnState = {
-			index: 0,
-			coolDown: 0
-		}
+		burnState = { index: 0, coolDown: 0 }
 		return
 	}
 
-	// 1. 需要地址时先搜，但不要 return 整个函数
+	// 1. 没有地址 → 搜索一次
 	if (!burnAddr) {
-		const ok = searchBurnAddr() // 抽成独立函数，内部 return true/false
-		if (ok) {
-			burnState.index = 0; // 新地址重置进度
-			burnState.coolDown = 0
-			uni.showToast({
-				icon: 'none',
-				title: '0x' + burnAddr.toString(16)
-			});
-		} else {
-			burnState.coolDown++;
-			if (burnState.coolDown > 10) {
-				burnState.coolDown = 0
-				burnAddr = null // 保持 null，下轮再搜
+		const ok = searchBurnAddr()
+		if (!ok) {
+			uni.showToast({ icon: 'none', title: '自燃未找到地址' })
+			return
+		}
+		burnState.index = 0
+		uni.showToast({ icon: 'none', title: '0x' + burnAddr.toString(16) })
+	} else {
+		// ★ 有缓存 → 验证一下地址是否还有效
+		try {
+			const test = h5gg.getValue('0x' + burnAddr.toString(16), 'F32')
+			if (test === undefined || test === null) {
+				// 读不到 → 缓存失效，重搜一次
+				burnAddr = null
+				const ok = searchBurnAddr()
+				if (!ok) {
+					uni.showToast({ icon: 'none', title: '自燃地址失效，未找到新地址' })
+					return
+				}
+				burnState.index = 0
+				uni.showToast({ icon: 'none', title: '0x' + burnAddr.toString(16) })
 			}
-			burnTimer = setTimeout(() => burnLoop(true), LOOP_DELAY)
-			return // 本轮不写值，等下一轮
+		} catch (e) {
+			burnAddr = null
+			const ok = searchBurnAddr()
+			if (!ok) {
+				uni.showToast({ icon: 'none', title: '自燃地址失效，未找到新地址' })
+				return
+			}
+			burnState.index = 0
+			uni.showToast({ icon: 'none', title: '0x' + burnAddr.toString(16) })
 		}
 	}
 
-	// 2. 写值
-	if (burnAddr && burnAddr > 0) {
+	// 2. 写值（地址已缓存，不会重复搜索）
+	if (burnAddr > 0) {
 		const start = burnState.index
-		const end = Math.min(start + SLICE_PER_LOOP, BURN_MAX);
+		const end = Math.min(start + SLICE_PER_LOOP, BURN_MAX)
 		for (let j = start; j < end; j++) {
-			try {
-				h5gg.setValue(burnAddr + BURN_STEP * j, 1, 'F32')
-			} catch (e) { }
+			try { h5gg.setValue(burnAddr + BURN_STEP * j, 1, 'F32') } catch (e) { }
 		}
 		burnState.index = (end >= BURN_MAX) ? 0 : end
 	}
 
-	// 3. 下一轮
 	burnTimer = setTimeout(() => burnLoop(true), LOOP_DELAY)
 }
-
 function searchBurnAddr() {
 	try {
 		h5gg.clearResults()
@@ -563,7 +573,6 @@ function searchBurnAddr() {
 
 
 let zrzhBaseAddr = 0
-
 function searchOneZhahua() {
 	try {
 		h5gg.clearResults()
@@ -599,51 +608,54 @@ function searchOneZhahua() {
 }
 
 let bloomGen = 0
-
 export async function bloomLoop(enabled) {
 	const gen = ++bloomGen
-
-	if (bloomTimer) {
-		clearTimeout(bloomTimer)
-		bloomTimer = null
-	}
-
+	if (bloomTimer) { clearTimeout(bloomTimer); bloomTimer = null }
 	if (!enabled) {
-		bloomState = {
-			index: 0,
-			coolDown: 0
-		}
+		bloomState = { index: 0, coolDown: 0 }
 		return
 	}
 
+	// 1. 没有地址 → 搜索一次
 	if (!bloomAddr) {
 		const addr = searchOneZhahua()
-		if (gen !== bloomGen) return // 期间被关闭/重启，丢弃
+		if (gen !== bloomGen) return
+		if (!(addr > 0)) {
+			uni.showToast({ icon: 'none', title: '炸花未找到地址' })
+			return
+		}
+		bloomAddr = addr
+		bloomState.index = 0
+		uni.showToast({ icon: 'none', title: '0x' + addr.toString(16) })
+	} else {
+		// ★ 有缓存 → 验证地址是否还有效
+		let valid = false
+		try {
+			const test = h5gg.getValue('0x' + bloomAddr.toString(16), 'F32')
+			if (test !== undefined && test !== null) valid = true
+		} catch (e) { }
 
-		if (addr > 0) {
+		if (!valid) {
+			// 缓存失效，重搜
+			bloomAddr = null
+			const addr = searchOneZhahua()
+			if (gen !== bloomGen) return
+			if (!(addr > 0)) {
+				uni.showToast({ icon: 'none', title: '炸花地址失效，未找到新地址' })
+				return
+			}
 			bloomAddr = addr
 			bloomState.index = 0
-			bloomState.coolDown = 0
-			uni.showToast({
-				icon: 'none',
-				title: '0x' + addr.toString(16)
-			});
-		} else {
-			bloomAddr = null // 统一用 null
-			bloomState.coolDown++
-			if (bloomState.coolDown > 10) bloomState.coolDown = 0
-			bloomTimer = setTimeout(() => bloomLoop(true), LOOP_DELAY)
-			return
+			uni.showToast({ icon: 'none', title: '0x' + addr.toString(16) })
 		}
 	}
 
-	if (bloomAddr && bloomAddr > 0) {
-		const start = bloomState.index;
+	// 2. 写值
+	if (bloomAddr > 0) {
+		const start = bloomState.index
 		const end = Math.min(start + SLICE_PER_LOOP, BLOOM_MAX)
 		for (let j = start; j < end; j++) {
-			try {
-				h5gg.setValue(bloomAddr + BLOOM_STEP * j, 0, 'F32')
-			} catch (e) { }
+			try { h5gg.setValue(bloomAddr + BLOOM_STEP * j, 0, 'F32') } catch (e) { }
 		}
 		bloomState.index = (end >= BLOOM_MAX) ? 0 : end
 	}
@@ -651,17 +663,13 @@ export async function bloomLoop(enabled) {
 	if (gen !== bloomGen) return
 	bloomTimer = setTimeout(() => bloomLoop(true), LOOP_DELAY)
 }
-
 export function stopBurnLoop() {
 	if (burnTimer) {
 		clearTimeout(burnTimer)
 		burnTimer = null
 	}
-	burnAddr = null
-	burnState = {
-		index: 0,
-		coolDown: 0
-	}
+	// ★ 保留 burnAddr 缓存！下次开启直接用
+	burnState = { index: 0, coolDown: 0 }
 }
 
 export function stopBloomLoop() {
@@ -669,11 +677,136 @@ export function stopBloomLoop() {
 		clearTimeout(bloomTimer)
 		bloomTimer = null
 	}
-	bloomAddr = null
-	bloomState = {
-		index: 0,
-		coolDown: 0
+	// ★ 保留 bloomAddr 缓存！下次开启直接用
+	bloomState = { index: 0, coolDown: 0 }
+}
+
+
+
+// ================= 吸火 =================
+const XIHUO_FEATURE_I32 = '-842150656'
+const XIHUO_SEARCH_FROM = '0x100000000'
+const XIHUO_SEARCH_TO = '0x1600000000'
+const XIHUO_NEARBY_VALUE = '-1'
+const XIHUO_NEARBY_RANGE = '0x60'
+const XIHUO_TARGET_VALUE = 3.5      // 命中判定的值
+const XIHUO_WRITE_VALUE = 999       // 写入的值
+const XIHUO_LOOP_DELAY = 1000       // 循环间隔 ms（吸火不需要太快）
+
+let xihuoTimer = null
+let xihuoRunning = false
+
+/**
+ * 吸火单次执行（搜索 + 写值）
+ * @returns {boolean} 是否至少写入了一个地址
+ */
+async function xihuoOnce() {
+	if (typeof h5gg === 'undefined' || typeof h5gg.searchNumber !== 'function') {
+		return false
 	}
+
+	try {
+		h5gg.clearResults()
+		h5gg.searchNumber(XIHUO_FEATURE_I32, 'I32', XIHUO_SEARCH_FROM, XIHUO_SEARCH_TO)
+		await customDelay(0)
+
+		h5gg.searchNearby(XIHUO_NEARBY_VALUE, 'F32', XIHUO_NEARBY_RANGE)
+		h5gg.searchNumber(XIHUO_NEARBY_VALUE, 'F32', XIHUO_SEARCH_FROM, XIHUO_SEARCH_TO)
+		await customDelay(0)
+
+		const count = h5gg.getResultsCount()
+		if (!count) {
+			h5gg.clearResults()
+			return false
+		}
+
+		const r = h5gg.getResults(count) || []
+		let wrote = false
+		for (let i = 0; i < r.length; i++) {
+			const item = r[i]
+			if (!item || !item.address) continue
+
+			const addr2Num = Number(item.address) + 4
+			if (!Number.isFinite(addr2Num) || addr2Num <= 0) continue
+			const addr2Hex = '0x' + addr2Num.toString(16)
+
+			let v
+			try {
+				v = Number(h5gg.getValue(addr2Hex, 'F32'))
+			} catch (e) {
+				continue
+			}
+
+			if (Math.abs(v - XIHUO_TARGET_VALUE) < 0.0001) {
+				try {
+					h5gg.setValue(addr2Hex, XIHUO_WRITE_VALUE, 'F32')
+					wrote = true
+				} catch (e) { }
+			}
+		}
+
+		h5gg.clearResults()
+		return wrote
+	} catch (e) {
+		try { h5gg.clearResults() } catch (_) { }
+		return false
+	}
+}
+
+
+let xihuoToastInited = false
+let xihuoLastOk = null
+/**
+ * 吸火主循环（开关式）
+ * @param {boolean} enabled 是否开启
+ */
+export async function xihuoLoop(enabled) {
+	if (xihuoTimer) {
+		clearTimeout(xihuoTimer)
+		xihuoTimer = null
+	}
+	if (!enabled) {
+		xihuoRunning = false
+		xihuoToastInited = false
+		xihuoLastOk = null
+		return
+	}
+
+	xihuoRunning = true
+	const wrote = xihuoOnce()
+
+	// ★ 只在状态变化时弹一次
+	if (xihuoLastOk !== wrote) {
+		xihuoLastOk = wrote
+		if (wrote) {
+			uni.showToast({ icon: 'none', title: '已吸取当前地图烛火' })
+		} else if (!xihuoToastInited) {
+			uni.showToast({ icon: 'none', title: '附近没有可吸取的烛火' })
+		}
+		xihuoToastInited = true
+	}
+
+	if (!xihuoRunning) return
+	// xihuoTimer = setTimeout(() => xihuoLoop(true), XIHUO_LOOP_DELAY)
+}
+
+/**
+ * 停止吸火循环
+ */
+export function stopXihuoLoop() {
+	if (xihuoTimer) {
+		clearTimeout(xihuoTimer)
+		xihuoTimer = null
+	}
+	xihuoRunning = false
+}
+
+/**
+ * 单次吸火（不循环），给用户手动"吸一次"用
+ * @returns {boolean}
+ */
+export async function xihuoOnceManual() {
+	return xihuoOnce()
 }
 
 
@@ -685,7 +818,7 @@ const TOTAL = 320 // 蜡烛数量
 const BATCH_SIZE = 8 // 每批处理个数
 
 // 缓存验证通过的蜡烛基址列表（避免重复搜索）
-let candleBaseAddrs = null
+let candleBaseAddrCache = null
 
 /**
  * 用 h5gg 搜索并验证蜡烛基址
@@ -700,12 +833,19 @@ let candleBaseAddrs = null
  *
  * @returns {Promise<number[]>} 验证通过的地址列表
  */
-let candleBaseAddrCache = null
 
 async function findCandleBaseAddrs() {
-	// 缓存命中直接返回
+	// ★ 缓存命中：先读一下验证地址是否还有效
 	if (candleBaseAddrCache) {
-		return candleBaseAddrCache
+		try {
+			const v = Number(h5gg.getValue(candleBaseAddrCache, 'I32'))
+			// 能读出数字就当有效（跟其他功能一致的宽松策略）
+			if (Number.isFinite(v)) {
+				return candleBaseAddrCache
+			}
+		} catch (e) { }
+		// 校验失败 → 清缓存重搜
+		candleBaseAddrCache = null
 	}
 
 	if (typeof h5gg === 'undefined' || typeof h5gg.searchNumber !== 'function') {
@@ -749,9 +889,9 @@ async function findCandleBaseAddrs() {
 		if (valAtAddr !== 1808480955) continue
 
 		const nextAddrNum = Number(item.address)
-		if (!Number.isFinite(nextAddrNum) || nextAddrNum <= 0) continue;
+		if (!Number.isFinite(nextAddrNum) || nextAddrNum <= 0) continue
 
-		const nextAddrHex = '0x' + (nextAddrNum + 4).toString(16);
+		const nextAddrHex = '0x' + (nextAddrNum + 4).toString(16)
 
 		let nextVal
 		try {
@@ -1412,7 +1552,7 @@ export function clearAllAddrCache() {
 	burnAddr = null
 	bloomAddr = null
 	fireworkAddr = null
-	candleBaseAddrs = null
+	candleBaseAddrCache = null
 	bigJumpAddr = null
 	clearMapCore()
 	clearWarpAddr()

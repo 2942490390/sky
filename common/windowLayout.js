@@ -139,7 +139,7 @@ export function applyWindowLayout() {
 	// 	`屏幕:${rect.screenW}x${rect.screenH}`)
 	try {
 		setWindowRect(rect.x, rect.y, rect.w, rect.h)
-		setDraggableArea(0, 0, 200, 100)
+		setDraggableArea(0, 0, 400, 100)
 	} catch (e) {
 		console.error('[windowLayout] setWindowRect 失败:', e)
 	}
@@ -183,7 +183,7 @@ function applyByCallbackSize(w, h) {
 
 	try {
 		setWindowRect(x, y, winW, winH)
-		setDraggableArea(0, 0, 200, 100)
+		setDraggableArea(0, 0, 400, 100)
 
 	} catch (e) {
 		console.error('[windowLayout] setWindowRect 失败:', e)
@@ -223,7 +223,7 @@ export function initWindowLayout(onChange) {
 	// 3. setLayoutAction
 	if (typeof setLayoutAction === 'function') {
 		setLayoutAction(function (w, h) {
-			console.log('[windowLayout] setLayoutAction 回调:', w, h)
+			// console.log('[windowLayout] setLayoutAction 回调:', w, h)
 			const rect = applyByCallbackSize(w, h)
 			// ★ 只有 rect 有效才回调
 			if (rect && onChange) onChange(rect)

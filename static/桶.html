@@ -1,0 +1,2127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>H5GG 内存地址查看器 · 特征码增强版 · Hex列 · 自动编码字符串</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+    }
+
+    .toolbar {
+      flex: 0 0 auto;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .addr-input {
+      flex: 1 1 200px;
+      min-width: 160px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #58a6ff;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 15px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .addr-input:focus {
+      border-color: #58a6ff;
+    }
+
+    .addr-input::placeholder {
+      color: #484f58;
+    }
+
+    .btn {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #c9d1d9;
+      font-size: 14px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: all .15s;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .btn:active {
+      transform: scale(.97);
+    }
+
+    .btn.primary {
+      background: #238636;
+      border-color: #2ea043;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .btn.primary:active {
+      background: #2ea043;
+    }
+
+    .btn:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    .btn.small {
+      padding: 10px 16px;
+      font-size: 13px;
+    }
+
+    .btn.warn {
+      background: #9e6a03;
+      border-color: #bb8009;
+      color: #fff;
+    }
+
+    .seg-group {
+      display: flex;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .seg {
+      padding: 8px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #8b949e;
+      border-right: 1px solid #30363d;
+      transition: all .15s;
+      user-select: none;
+    }
+
+    .seg:last-child {
+      border-right: none;
+    }
+
+    .seg.active {
+      background: #1f6feb;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .seg:active {
+      background: #30363d;
+    }
+
+    .seg.active:active {
+      background: #1f6feb;
+    }
+
+    .label {
+      color: #8b949e;
+      font-size: 12px;
+      margin-right: 2px;
+    }
+
+    .status {
+      flex: 0 0 auto;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: #8b949e;
+      background: #0d1117;
+      border-bottom: 1px solid #21262d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 30px;
+    }
+
+    .status .err {
+      color: #f85149;
+    }
+
+    .status .ok {
+      color: #3fb950;
+    }
+
+    .status .loading {
+      color: #d29922;
+    }
+
+    .progress-bar {
+      flex: 0 0 auto;
+      height: 2px;
+      background: transparent;
+      overflow: hidden;
+    }
+
+    .progress-bar .fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #1f6feb, #58a6ff);
+      transition: width .1s linear;
+    }
+
+    .table-wrap {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .thead {
+      flex: 0 0 auto;
+      display: flex;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      font-size: 11px;
+      color: #8b949e;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      z-index: 5;
+    }
+
+    .th {
+      padding: 8px 6px;
+      text-align: right;
+      border-right: 1px solid #21262d;
+      overflow: visible;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    .th.addr {
+      text-align: left;
+      color: #58a6ff;
+    }
+
+    .th.offset {
+      text-align: center;
+    }
+
+    .th:last-child {
+      border-right: none;
+    }
+
+    .th.str {
+      text-align: left;
+      color: #7ee787;
+    }
+
+    .scroller {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      position: relative;
+      will-change: transform;
+    }
+
+    .scroller::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    .scroller::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .scroller::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 3px;
+    }
+
+    .phantom {
+      width: 1px;
+      pointer-events: none;
+    }
+
+    .viewport {
+      position: absolute;
+      top: 0;
+      left: 0;
+      min-width: 100%;
+    }
+
+    .tr {
+      display: flex;
+      border-bottom: 1px solid #161b22;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1;
+      align-items: center;
+      min-width: fit-content;
+    }
+
+    .tr:hover {
+      background: #161b22;
+    }
+
+    .tr.base-row {
+      background: #1c2128;
+    }
+
+    .tr.base-row .td.addr {
+      color: #f0883e;
+      font-weight: 700;
+    }
+
+    .td {
+      padding: 7px 6px;
+      text-align: right;
+      flex: 0 0 auto;
+      overflow: visible;
+      white-space: nowrap;
+      color: #c9d1d9;
+      min-width: 36px;
+    }
+
+    .td.addr {
+      text-align: left;
+      color: #58a6ff;
+    }
+
+    .td.offset {
+      text-align: center;
+      color: #6e7681;
+      font-size: 11px;
+    }
+
+    .td.i8 {
+      color: #79c0ff;
+    }
+
+    .td.i16 {
+      color: #a5d6ff;
+    }
+
+    .td.i32 {
+      color: #d2a8ff;
+    }
+
+    .td.i64 {
+      color: #ffa657;
+    }
+
+    .td.f32 {
+      color: #7ee787;
+    }
+
+    .td.f64 {
+      color: #ff7b72;
+    }
+
+    .td.hex {
+      color: #ffa657;
+      font-weight: 600;
+    }
+
+    .td.nan {
+      color: #484f58;
+    }
+
+    .td.str {
+      text-align: left;
+      color: #7ee787;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .td.str:hover {
+      background: #1c2128;
+    }
+
+    .td.str.empty-str {
+      color: #30363d;
+      cursor: default;
+    }
+
+    .td.str .enc-tag {
+      color: #6e7681;
+      font-size: 9px;
+      border: 1px solid #30363d;
+      border-radius: 3px;
+      padding: 0 3px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #484f58;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .empty .icon {
+      font-size: 40px;
+      opacity: .4;
+    }
+
+    :root {
+      --w-offset: 56px;
+      --w-addr: 104px;
+      --w-val: 128px;
+      --w-str: 240px;
+    }
+
+    @media (max-width: 700px) {
+
+      .tr,
+      .td {
+        font-size: 10px;
+      }
+
+      .th {
+        font-size: 10px;
+      }
+    }
+
+    /* ===== 快照面板 ===== */
+    .snap-panel {
+      flex: 0 0 auto;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 8px 12px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .snap-panel.show {
+      display: flex;
+    }
+
+    .snap-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .snap-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+      transition: all .15s;
+    }
+
+    .snap-chip:hover {
+      background: #21262d;
+    }
+
+    .snap-chip .check {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 1.5px solid #6e7681;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+    }
+
+    .snap-chip.selected {
+      border-color: #3fb950;
+      background: #1a2b1a;
+    }
+
+    .snap-chip.selected .check {
+      background: #3fb950;
+      border-color: #3fb950;
+    }
+
+    .snap-chip.selected .check::after {
+      content: '✓';
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .snap-chip .meta {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+    }
+
+    .snap-chip .meta .id {
+      color: #c9d1d9;
+      font-weight: 600;
+    }
+
+    .snap-chip .meta .sub {
+      color: #6e7681;
+      font-size: 10px;
+    }
+
+    .snap-chip .del {
+      color: #f85149;
+      font-size: 14px;
+      margin-left: 2px;
+      padding: 0 2px;
+      opacity: .6;
+    }
+
+    .snap-chip .del:active {
+      opacity: 1;
+    }
+
+    .snap-chip .anchor-badge {
+      font-size: 9px;
+      background: #f0883e;
+      color: #fff;
+      border-radius: 3px;
+      padding: 1px 4px;
+      font-weight: 600;
+    }
+
+    /* ===== 模态框 ===== */
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .65);
+      z-index: 100;
+      display: none;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .modal-mask.show {
+      display: flex;
+    }
+
+    .modal {
+      background: #0d1117;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      animation: slideUp .25s ease;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: none;
+        opacity: 1;
+      }
+    }
+
+    .modal-head {
+      flex: 0 0 auto;
+      padding: 14px 16px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .modal-head .title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #c9d1d9;
+    }
+
+    .modal-head .title small {
+      display: block;
+      color: #8b949e;
+      font-size: 11px;
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    .modal-body {
+      flex: 1 1 auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-scroll {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .modal-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    .modal-scroll::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+
+    .modal-scroll::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 3px;
+    }
+
+    .sig-thead {
+      flex: 0 0 auto;
+      display: flex;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      font-size: 11px;
+      color: #8b949e;
+      font-weight: 600;
+      overflow: hidden;
+      /* 不横滚，靠 JS 同步 */
+      white-space: nowrap;
+    }
+
+    .sig-row {
+      display: flex;
+      border-bottom: 1px solid #161b22;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      align-items: center;
+      min-width: fit-content;
+    }
+
+    .sig-row:hover {
+      background: #161b22;
+    }
+
+    .sig-row .td {
+      padding: 8px 6px;
+      overflow: visible;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    .sig-row .td.rel {
+      text-align: right;
+    }
+
+    .sig-row .anchor {
+      color: #f0883e;
+    }
+
+    .sig-row .val-match {
+      color: #3fb950;
+      font-weight: 600;
+    }
+
+    .sig-row .pri {
+      display: inline-block;
+      min-width: 22px;
+      text-align: center;
+      font-weight: 700;
+      border-radius: 4px;
+      padding: 1px 4px;
+      font-size: 11px;
+    }
+
+    .pri.p1 {
+      background: #3fb950;
+      color: #0d1117;
+    }
+
+    .pri.p2 {
+      background: #1f6feb;
+      color: #fff;
+    }
+
+    .pri.p3 {
+      background: #9e6a03;
+      color: #fff;
+    }
+
+    .pri.p4 {
+      background: #30363d;
+      color: #8b949e;
+    }
+
+    .sig-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #484f58;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .sig-empty .icon {
+      font-size: 36px;
+      opacity: .4;
+    }
+
+    .badge-zero {
+      color: #6e7681;
+    }
+
+    .anchor-row {
+      background: #2d1f00 !important;
+    }
+
+    /* ===== 列配置模态框 ===== */
+    .colcfg-grid {
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
+
+    .colcfg-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 12px 14px;
+      cursor: pointer;
+      user-select: none;
+      transition: all .15s;
+      font-size: 13px;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      color: #c9d1d9;
+    }
+
+    .colcfg-item:active {
+      transform: scale(.98);
+    }
+
+    .colcfg-item.on {
+      border-color: #3fb950;
+      background: #1a2b1a;
+    }
+
+    .colcfg-item .box {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 1.5px solid #6e7681;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+    }
+
+    .colcfg-item.on .box {
+      background: #3fb950;
+      border-color: #3fb950;
+    }
+
+    .colcfg-item.on .box::after {
+      content: '✓';
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .colcfg-item .name {
+      flex: 1;
+    }
+
+    .colcfg-item .name small {
+      display: block;
+      color: #6e7681;
+      font-size: 10px;
+      font-weight: 400;
+      margin-top: 2px;
+      font-family: -apple-system, sans-serif;
+    }
+
+    .colcfg-actions {
+      padding: 12px 16px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      border-top: 1px solid #21262d;
+      background: #0d1117;
+    }
+
+    .colcfg-tip {
+      padding: 10px 16px;
+      font-size: 11px;
+      color: #6e7681;
+      background: #0d1117;
+      border-top: 1px solid #21262d;
+      line-height: 1.5;
+    }
+
+    /* ===== 编码诊断模态框 ===== */
+    .diag-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 16px;
+      border-bottom: 1px solid #161b22;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .diag-row.best {
+      background: #1a2b1a;
+    }
+
+    .diag-row .enc {
+      flex: 0 0 88px;
+      color: #d2a8ff;
+      font-weight: 600;
+    }
+
+    .diag-row .sc {
+      flex: 0 0 60px;
+      color: #8b949e;
+      text-align: right;
+    }
+
+    .diag-row .txt {
+      flex: 1;
+      color: #c9d1d9;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+
+    .diag-row.invalid .txt {
+      color: #f85149;
+    }
+
+    .diag-row.invalid .enc {
+      color: #6e7681;
+    }
+
+    .diag-row .badge {
+      display: inline-block;
+      background: #3fb950;
+      color: #0d1117;
+      border-radius: 3px;
+      padding: 0 4px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-left: 6px;
+    }
+
+    .diag-meta {
+      padding: 12px 16px;
+      color: #8b949e;
+      font-size: 12px;
+      background: #0d1117;
+      border-bottom: 1px solid #21262d;
+      line-height: 1.6;
+    }
+
+    .diag-meta code {
+      color: #58a6ff;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="toolbar">
+    <div class="row">
+      <input class="addr-input" id="addrInput" type="text" placeholder="输入十六进制地址，如 0x104000000" autocapitalize="off"
+        autocorrect="off" spellcheck="false">
+      <button class="btn primary" id="scanBtn">读取</button>
+      <button class="btn" id="locateBtn" title="跳转到锚点地址">定位</button>
+      <button class="btn small" id="copyJsonBtn" title="复制当前数据为JSON">📋 复制JSON</button>
+    </div>
+    <div class="row">
+      <span class="label">范围</span>
+      <div class="seg-group" id="rangeGroup">
+        <div class="seg" data-range="256">±256</div>
+        <div class="seg active" data-range="1024">±1024</div>
+        <div class="seg" data-range="2048">±2048</div>
+        <div class="seg" data-range="4096">±4096</div>
+      </div>
+      <span class="label" style="margin-left:8px;">步进</span>
+      <div class="seg-group" id="stepGroup">
+        <div class="seg active" data-step="4" data-dir="both">±4</div>
+        <div class="seg" data-step="8" data-dir="both">±8</div>
+        <div class="seg" data-step="4" data-dir="fwd">+4</div>
+        <div class="seg" data-step="4" data-dir="back">-4</div>
+        <div class="seg" data-step="8" data-dir="fwd">+8</div>
+        <div class="seg" data-step="8" data-dir="back">-8</div>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn small" id="saveSnapBtn">💾 保存快照</button>
+      <button class="btn small" id="toggleSnapBtn">🗂 快照列表</button>
+      <button class="btn primary small" id="matchBtn">🔗 匹配特征码</button>
+      <button class="btn warn small" id="clearSnapBtn">🗑 清空</button>
+      <button class="btn small" id="colCfgBtn" title="配置显示哪些列">⚙ 列配置</button>
+      <a class="btn primary small" href="https://env-00jy6kq4uyns-static.normal.cloudstatic.cn/index.html"
+        target="_blank" rel="noopener"
+        style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">🌐 打开网页</a>
+    </div>
+    <div class="row">
+      <span class="label">字符串最大字节数</span>
+      <div class="seg-group" id="strLenGroup">
+        <div class="seg" data-len="32">32</div>
+        <div class="seg active" data-len="64">64</div>
+        <div class="seg" data-len="128">128</div>
+        <div class="seg" data-len="256">256</div>
+      </div>
+      <span class="label" style="margin-left:8px;color:#6e7681;font-size:11px;">（自动反推编码，只读可视区并缓存；点击字符串单元格看诊断）</span>
+    </div>
+  </div>
+
+  <div class="snap-panel" id="snapPanel">
+    <div class="row" style="justify-content:space-between;">
+      <span class="label">已保存快照（勾选 ≥2 个后匹配，从各自锚点出发比较）</span>
+      <span class="label" id="snapCount" style="color:#3fb950;"></span>
+    </div>
+    <div class="snap-list" id="snapList"></div>
+  </div>
+
+  <div class="status">
+    <span id="statusText">就绪</span>
+    <span id="statusCount"></span>
+  </div>
+  <div class="progress-bar" id="progressBar">
+    <div class="fill" id="progressFill"></div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="thead" id="thead"></div>
+    <div class="scroller" id="scroller">
+      <div class="phantom" id="phantom"></div>
+      <div class="viewport" id="viewport"></div>
+    </div>
+    <div class="empty" id="empty">
+      <div class="icon">🔍</div>
+      <div>输入地址后点击「读取」</div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="modalMask">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="title">
+          🎯 特征码匹配结果
+          <small id="modalSub">从各快照各自锚点出发，匹配次数越多、离锚点越近越靠前</small>
+        </div>
+        <button class="btn primary" id="modalCloseBtn">关闭</button>
+      </div>
+      <div class="modal-body">
+        <div class="sig-thead" id="sigThead"></div> <!-- 新增：固定表头 -->
+        <div class="modal-scroll" id="modalScroll">
+          <div class="sig-empty" id="modalEmpty">
+            <div class="icon">🎯</div>
+            <div id="modalEmptyText">请先保存至少 2 个快照，勾选后点击「匹配特征码」</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="colCfgMask">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="title">
+          ⚙ 列配置
+          <small>勾选要显示的列，默认隐藏 F64，配置自动保存</small>
+        </div>
+        <button class="btn primary" id="colCfgCloseBtn">完成</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-scroll">
+          <div class="colcfg-grid" id="colCfgGrid"></div>
+        </div>
+        <div class="colcfg-actions">
+          <button class="btn small" id="colCfgAllBtn">全部显示</button>
+          <button class="btn small" id="colCfgDefaultBtn">恢复默认</button>
+          <button class="btn small warn" id="colCfgNoneBtn">全部隐藏</button>
+        </div>
+        <div class="colcfg-tip">
+          说明：偏移 / 地址为表格基础列，始终显示。隐藏「字符串」后不会触发懒加载读取（省性能）。
+          列配置只影响显示，不影响 JSON 导出中的数值字段和特征码匹配。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ★ 编码诊断模态框 -->
+  <div class="modal-mask" id="diagMask">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="title">
+          🔬 编码诊断
+          <small id="diagSub">同一段字节，五种候选编码各解一遍并打分</small>
+        </div>
+        <button class="btn primary" id="diagCloseBtn">关闭</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-scroll">
+          <div class="diag-meta" id="diagMeta"></div>
+          <div id="diagList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var TYPE_LIST = ['I8', 'I16', 'I32', 'I64', 'F32', 'F64'];
+      var STORE_KEY = 'h5gg_snapshots_v1';
+      var COL_CFG_KEY = 'h5gg_colcfg_v2';
+      var ROW_HEIGHT = 30;
+      var BATCH_SIZE = 24;
+
+      // ★ 列定义：字符串合并为一列 'str'，默认显示
+      var COLUMN_DEFS = [
+        {key: 'offset', label: '偏移', className: 'offset', default: true, locked: true, desc: '相对锚点偏移'},
+        {key: 'addr', label: '地址', className: 'addr', default: true, locked: true, desc: '绝对内存地址'},
+        {key: 'hex', label: 'HEX', className: 'hex', default: true, desc: 'U32 十六进制'},
+        {key: 'str', label: '字符串', className: 'str', default: true, desc: '自动反推编码'},
+        {key: 'I8', label: 'I8', className: 'i8', default: true, desc: '8 位有符号整数'},
+        {key: 'I16', label: 'I16', className: 'i16', default: true, desc: '16 位有符号整数'},
+        {key: 'I32', label: 'I32', className: 'i32', default: true, desc: '32 位有符号整数'},
+        {key: 'I64', label: 'I64', className: 'i64', default: true, desc: '64 位有符号整数'},
+        {key: 'F32', label: 'F32', className: 'f32', default: true, desc: '32 位浮点数'},
+        {key: 'F64', label: 'F64', className: 'f64', default: false, desc: '64 位浮点数'}
+      ];
+
+      var $addrInput = document.getElementById('addrInput');
+      var $scanBtn = document.getElementById('scanBtn');
+      var $locateBtn = document.getElementById('locateBtn');
+      var $rangeGroup = document.getElementById('rangeGroup');
+      var $stepGroup = document.getElementById('stepGroup');
+      var $strLenGroup = document.getElementById('strLenGroup');
+      var $statusText = document.getElementById('statusText');
+      var $statusCount = document.getElementById('statusCount');
+      var $progressFill = document.getElementById('progressFill');
+      var $thead = document.getElementById('thead');
+      var $scroller = document.getElementById('scroller');
+      var $phantom = document.getElementById('phantom');
+      var $viewport = document.getElementById('viewport');
+      var $empty = document.getElementById('empty');
+      var $copyJsonBtn = document.getElementById('copyJsonBtn');
+      var $saveSnapBtn = document.getElementById('saveSnapBtn');
+      var $toggleSnapBtn = document.getElementById('toggleSnapBtn');
+      var $matchBtn = document.getElementById('matchBtn');
+      var $clearSnapBtn = document.getElementById('clearSnapBtn');
+      var $snapPanel = document.getElementById('snapPanel');
+      var $snapList = document.getElementById('snapList');
+      var $snapCount = document.getElementById('snapCount');
+      var $modalMask = document.getElementById('modalMask');
+      var $modalCloseBtn = document.getElementById('modalCloseBtn');
+      var $modalScroll = document.getElementById('modalScroll');
+      var $modalEmpty = document.getElementById('modalEmpty');
+      var $modalEmptyText = document.getElementById('modalEmptyText');
+      var $modalSub = document.getElementById('modalSub');
+      var $sigThead = document.getElementById('sigThead');
+      var $colCfgBtn = document.getElementById('colCfgBtn');
+      var $colCfgMask = document.getElementById('colCfgMask');
+      var $colCfgGrid = document.getElementById('colCfgGrid');
+      var $colCfgCloseBtn = document.getElementById('colCfgCloseBtn');
+      var $colCfgAllBtn = document.getElementById('colCfgAllBtn');
+      var $colCfgDefaultBtn = document.getElementById('colCfgDefaultBtn');
+      var $colCfgNoneBtn = document.getElementById('colCfgNoneBtn');
+      var $diagMask = document.getElementById('diagMask');
+      var $diagCloseBtn = document.getElementById('diagCloseBtn');
+      var $diagSub = document.getElementById('diagSub');
+      var $diagMeta = document.getElementById('diagMeta');
+      var $diagList = document.getElementById('diagList');
+
+      var state = {
+        range: 1024,
+        step: 4,
+        dir: 'both',
+        baseAddr: null,
+        baseNum: 0n,
+        rows: [],
+        loading: false,
+        token: 0,
+        lastStart: 0,
+        lastEnd: 0,
+        colWidths: {off: 50, addr: 80, hex: 90, str: 240, I8: 40, I16: 50, I32: 80, I64: 130, F32: 60, F64: 130},
+        rawI64: [],
+        snapshots: [],
+        selectedSnapIds: new Set(),
+        strMaxBytes: 64,     // ★ 字符串最大字节数
+        visibleCols: {}
+      };
+
+      function isH5GG() {
+        return typeof h5gg !== 'undefined' && h5gg && typeof h5gg.getValue === 'function';
+      }
+
+      (function initWindowLayout() {
+        if (typeof setLayoutAction !== 'function') return;
+        setLayoutAction(function (w, h) {if (typeof setWindowRect === 'function') setWindowRect(0, 0, w, h);});
+      })();
+
+      function parseHexAddr(str) {
+        if (!str) return null;
+        str = str.trim();
+        if (!/^0x[0-9a-fA-F]+$/.test(str)) {
+          if (/^[0-9a-fA-F]+$/.test(str)) str = '0x' + str;
+          else return null;
+        }
+        try {
+          var n = BigInt(str);
+          if (n < 0n) return null;
+          return {num: n, str: '0x' + n.toString(16)};
+        } catch (e) {return null;}
+      }
+
+      function toHex(n) {
+        if (typeof n === 'bigint') return '0x' + n.toString(16);
+        if (Number.isInteger(n) && !Number.isSafeInteger(n)) {
+          try {return '0x' + BigInt(n).toString(16);} catch (e) { }
+        }
+        return '0x' + n.toString(16);
+      }
+
+      function fmtNum(v) {
+        if (typeof v !== 'number' || !isFinite(v)) return 'NaN';
+        if (Number.isInteger(v)) return String(v);
+        if (Math.abs(v) < 1e-4 && v !== 0) return v.toExponential(3);
+        if (Math.abs(v) >= 1e7) return v.toExponential(3);
+        return parseFloat(v.toFixed(6)).toString();
+      }
+
+      function readHexAt(addrStr) {
+        try {
+          var raw = h5gg.getValue(addrStr, 'U32');
+          var num = Number(raw);
+          if (!Number.isFinite(num)) return '-';
+          return '0x' + (num >>> 0).toString(16).toUpperCase().padStart(8, '0');
+        } catch (e) {
+          return '-';
+        }
+      }
+
+      // ============================================================
+      // ★★★ 自动反推编码：读原始字节 → 五种候选各解一遍 → 打分选优
+      // ============================================================
+      function readBytes(addrNum, len) {
+        var out = [];
+        for (var i = 0; i < len; i++) {
+          var addr = toHex(addrNum + BigInt(i));
+          var b;
+          try {b = Number(h5gg.getValue(addr, 'U8'));}
+          catch (e) {break;}
+          if (!isFinite(b)) break;
+          out.push(b & 0xFF);
+        }
+        return out;
+      }
+
+      // UTF-8 严格解码（遇到非法立即返回 valid=false）
+      function tryUTF8(bytes) {
+        var s = '', i = 0;
+        while (i < bytes.length) {
+          var b = bytes[i];
+          if (b === 0) break;
+          var len, cp;
+          if (b < 0x80) {len = 1; cp = b;}
+          else if ((b & 0xE0) === 0xC0) {len = 2; cp = b & 0x1F;}
+          else if ((b & 0xF0) === 0xE0) {len = 3; cp = b & 0x0F;}
+          else if ((b & 0xF8) === 0xF0) {len = 4; cp = b & 0x07;}
+          else return {text: s, valid: false, consumed: i};
+          if (i + len > bytes.length) return {text: s, valid: false, consumed: i};
+          for (var k = 1; k < len; k++) {
+            var b2 = bytes[i + k];
+            if ((b2 & 0xC0) !== 0x80) return {text: s, valid: false, consumed: i};
+            cp = (cp << 6) | (b2 & 0x3F);
+          }
+          if (len === 2 && cp < 0x80) return {text: s, valid: false, consumed: i};
+          if (len === 3 && cp < 0x800) return {text: s, valid: false, consumed: i};
+          if (len === 4 && cp < 0x10000) return {text: s, valid: false, consumed: i};
+          if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) return {text: s, valid: false, consumed: i};
+          try {s += String.fromCodePoint(cp);} catch (e) {return {text: s, valid: false, consumed: i};}
+          i += len;
+        }
+        return {text: s, valid: true, consumed: i};
+      }
+
+      // UTF-16（LE / BE）
+      function tryUTF16(bytes, littleEndian) {
+        var s = '', i = 0, pendingHigh = -1;
+        while (i + 1 < bytes.length) {
+          var lo = bytes[i], hi = bytes[i + 1];
+          var u = littleEndian ? (lo | (hi << 8)) : ((lo << 8) | hi);
+          if (u === 0) break;
+          i += 2;
+          if (u >= 0xD800 && u <= 0xDBFF) {
+            if (pendingHigh >= 0) return {text: s, valid: false, consumed: i};
+            pendingHigh = u; continue;
+          }
+          if (u >= 0xDC00 && u <= 0xDFFF) {
+            if (pendingHigh < 0) return {text: s, valid: false, consumed: i};
+            s += String.fromCharCode(pendingHigh, u);
+            pendingHigh = -1; continue;
+          }
+          if (pendingHigh >= 0) return {text: s, valid: false, consumed: i};
+          s += String.fromCharCode(u);
+        }
+        if (pendingHigh >= 0) return {text: s, valid: false, consumed: i};
+        return {text: s, valid: true, consumed: i};
+      }
+
+      // UTF-32（LE / BE）
+      function tryUTF32(bytes, littleEndian) {
+        var s = '', i = 0;
+        while (i + 3 < bytes.length) {
+          var b0 = bytes[i], b1 = bytes[i + 1], b2 = bytes[i + 2], b3 = bytes[i + 3];
+          var cp = littleEndian
+            ? ((b0) | (b1 << 8) | (b2 << 16) | (b3 << 24)) >>> 0
+            : ((b3) | (b2 << 8) | (b1 << 16) | (b0 << 24)) >>> 0;
+          if (cp === 0) break;
+          i += 4;
+          if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {
+            return {text: s, valid: false, consumed: i};
+          }
+          try {s += String.fromCodePoint(cp);} catch (e) {return {text: s, valid: false, consumed: i};}
+        }
+        return {text: s, valid: true, consumed: i};
+      }
+
+      function detectBOM(b) {
+        if (b.length >= 3 && b[0] === 0xEF && b[1] === 0xBB && b[2] === 0xBF) return 'UTF-8';
+        if (b.length >= 4 && b[0] === 0xFF && b[1] === 0xFE && b[2] === 0x00 && b[3] === 0x00) return 'UTF-32LE';
+        if (b.length >= 4 && b[0] === 0x00 && b[1] === 0x00 && b[2] === 0xFE && b[3] === 0xFF) return 'UTF-32BE';
+        if (b.length >= 2 && b[0] === 0xFF && b[1] === 0xFE) return 'UTF-16LE';
+        if (b.length >= 2 && b[0] === 0xFE && b[1] === 0xFF) return 'UTF-16BE';
+        return null;
+      }
+
+      // 打分：可打印比例、CJK 加权、乱码惩罚、完整性、BOM
+      function scoreResult(res, bytesLen, bomHit) {
+        if (!res.valid) return -1e9;
+        var t = res.text;
+        if (!t) return 0;
+        var score = 0;
+        score += Math.min(t.length, 20) * 2;
+        var printable = 0, cjk = 0, bad = 0;
+        for (var i = 0; i < t.length; i++) {
+          var c = t.codePointAt(i);
+          if (c >= 0x20 && c !== 0x7F && c !== 0xFFFD &&
+            !(c >= 0xE000 && c <= 0xF8FF) &&
+            !(c >= 0x0000 && c <= 0x001F)) {
+            printable++;
+          } else bad++;
+          if ((c >= 0x4E00 && c <= 0x9FFF) || (c >= 0x3400 && c <= 0x4DBF)) cjk++;
+        }
+        score += printable * 5;
+        score -= bad * 15;
+        score += cjk * 3;
+        score += (res.consumed / Math.max(1, bytesLen)) * 10;
+        if (bomHit) score += 50;
+        return score;
+      }
+
+      // 返回 { text, enc, score, all: [{name,text,valid,score}] }
+      function decodeAuto(bytes) {
+        var bom = detectBOM(bytes);
+        var candidates = [
+          {name: 'UTF-8', fn: function (b) {return tryUTF8(b);}},
+          {name: 'UTF-16LE', fn: function (b) {return tryUTF16(b, true);}},
+          {name: 'UTF-16BE', fn: function (b) {return tryUTF16(b, false);}},
+          {name: 'UTF-32LE', fn: function (b) {return tryUTF32(b, true);}},
+          {name: 'UTF-32BE', fn: function (b) {return tryUTF32(b, false);}}
+        ];
+        var all = [], best = null;
+        for (var i = 0; i < candidates.length; i++) {
+          var c = candidates[i];
+          var r = c.fn(bytes);
+          var isBom = (bom === c.name);
+          var sc = scoreResult(r, bytes.length, isBom);
+          var item = {name: c.name, text: r.text, valid: r.valid, score: sc, bom: isBom, consumed: r.consumed};
+          all.push(item);
+          if (!best || sc > best.score) best = item;
+        }
+        return {
+          text: best.text, enc: best.name, score: best.score,
+          valid: best.valid, all: all
+        };
+      }
+
+      // ★ 单行懒加载字符串（只读可见列需要的）
+      function ensureRowString(row) {
+        if (!row) return;
+        if (!state.visibleCols.str) {row._strLoaded = true; return;}
+        if (row._strLoaded) return;
+        var addrNum = row._addrNum;
+        if (addrNum == null) {
+          try {addrNum = BigInt(row.addr); row._addrNum = addrNum;}
+          catch (e) {row.strText = ''; row.strEnc = ''; row._strLoaded = true; return;}
+        }
+        var bytes = readBytes(addrNum, state.strMaxBytes);
+        row._strBytes = bytes;
+        if (!bytes.length) {row.strText = ''; row.strEnc = ''; row._strLoaded = true; return;}
+        var r = decodeAuto(bytes);
+        // 分数太低认为不是字符串
+        if (!r.valid || r.score < 10 || !r.text) {
+          row.strText = ''; row.strEnc = ''; row.strScore = r.score;
+        } else {
+          row.strText = r.text; row.strEnc = r.enc; row.strScore = r.score;
+        }
+        row._strDecoded = r;
+        row._strLoaded = true;
+      }
+
+      function ensureRangeStrings(startIdx, endIdx) {
+        if (!isH5GG()) return;
+        if (!state.visibleCols.str) return;
+        for (var i = startIdx; i < endIdx; i++) {
+          var row = state.rows[i];
+          if (row && !row._strLoaded) ensureRowString(row);
+        }
+      }
+
+      function valueToKey(type, rawVal, rawI64) {
+        if (type === 'I64') return rawI64 == null ? 'I64:NaN' : ('I64:' + String(rawI64));
+        if (type === 'I8' || type === 'I16' || type === 'I32') {
+          if (typeof rawVal !== 'number' || !isFinite(rawVal)) return type + ':NaN';
+          return type + ':' + Math.floor(rawVal);
+        }
+        if (type === 'F32' || type === 'F64') {
+          if (typeof rawVal !== 'number' || !isFinite(rawVal)) return type + ':NaN';
+          var buf = new ArrayBuffer(8);
+          var f64 = new Float64Array(buf);
+          var u32 = new Uint32Array(buf);
+          f64[0] = rawVal;
+          return type + ':' + u32[1].toString(16).padStart(8, '0') + u32[0].toString(16).padStart(8, '0');
+        }
+        return '?';
+      }
+
+      function buildHead() {
+        var html = '';
+        COLUMN_DEFS.forEach(function (col) {
+          if (!state.visibleCols[col.key]) return;
+          var extraCls = col.className ? (' ' + col.className) : '';
+          var style = '';
+          if (col.key === 'offset') style = 'min-width:var(--w-offset)';
+          else if (col.key === 'addr') style = 'min-width:var(--w-addr)';
+          else if (col.key === 'hex') style = 'min-width:100px';
+          else if (col.key === 'str') style = 'min-width:var(--w-str)';
+          else {
+            var minW = (col.key === 'I64' || col.key === 'F64') ? 140 : (col.key === 'I32' || col.key === 'F32' ? 110 : 70);
+            style = 'min-width:' + minW + 'px';
+          }
+          html += '<div class="th' + extraCls + '" style="' + style + '">' + col.label + '</div>';
+        });
+        $thead.innerHTML = html;
+      }
+
+      function buildOffsets() {
+        var range = state.range, step = state.step, dir = state.dir, offsets = [];
+        if (dir === 'both' || dir === 'fwd') for (var d = 0; d <= range; d += step) offsets.push(d);
+        if (dir === 'both' || dir === 'back') {
+          var start = (dir === 'both') ? -step : 0;
+          for (var d2 = start; d2 >= -range; d2 -= step) offsets.push(d2);
+        }
+        var seen = Object.create(null);
+        offsets = offsets.filter(function (d) {if (seen[d]) return false; seen[d] = true; return true;});
+        offsets.sort(function (a, b) {return a - b;});
+        return offsets;
+      }
+
+      function readRow(baseNum, offset) {
+        var addrBig = baseNum + BigInt(offset);
+        var addrStr = toHex(addrBig);
+        var vals = [], rawI64Val = null;
+        for (var i = 0; i < TYPE_LIST.length; i++) {
+          var v;
+          try {
+            v = h5gg.getValue(addrStr, TYPE_LIST[i]);
+            if (TYPE_LIST[i] === 'I64') {rawI64Val = (typeof v === 'string') ? v : String(v); v = Number(v);}
+            else v = Number(v);
+          } catch (e) {v = NaN; if (TYPE_LIST[i] === 'I64') rawI64Val = 'NaN';}
+          vals.push(v);
+        }
+        var hexVal = readHexAt(addrStr);
+        return {
+          offset: offset, addr: addrStr, vals: vals, rawI64: rawI64Val, hex: hexVal,
+          _addrNum: addrBig, _strLoaded: false, strText: '', strEnc: '', strScore: 0,
+          _strBytes: null, _strDecoded: null
+        };
+      }
+
+      function startScan() {
+        var parsed = parseHexAddr($addrInput.value);
+        if (!parsed) {setStatus('地址格式错误，请输入如 0x104000000', 'err'); return;}
+        if (!isH5GG()) {setStatus('未检测到 h5gg 环境，无法读取内存', 'err'); return;}
+        state.token++;
+        var myToken = state.token;
+        state.baseAddr = parsed.str;
+        state.baseNum = parsed.num;
+        state.loading = true;
+
+        var offsets = buildOffsets();
+        var total = offsets.length, idx = 0;
+        $empty.style.display = 'none';
+        $scroller.scrollTop = 0;
+        $viewport.innerHTML = '';
+        $phantom.style.height = (total * ROW_HEIGHT) + 'px';
+        $scanBtn.disabled = true;
+        setStatus('正在读取 ' + total + ' 个位置…', 'loading');
+        $statusCount.textContent = '0 / ' + total;
+        state.rows = new Array(total);
+        state.rawI64 = new Array(total);
+
+        function step() {
+          if (myToken !== state.token) return;
+          var end = Math.min(idx + BATCH_SIZE, total);
+          for (; idx < end; idx++) {
+            var row = readRow(state.baseNum, offsets[idx]);
+            state.rows[idx] = row;
+            state.rawI64[idx] = row.rawI64;
+          }
+          $progressFill.style.width = (idx / total * 100) + '%';
+          $statusCount.textContent = idx + ' / ' + total;
+          if (idx < total) setTimeout(step, 0);
+          else finishScan(myToken);
+        }
+        requestAnimationFrame(function () {setTimeout(step, 0);});
+      }
+
+      function finishScan(myToken) {
+        if (myToken !== state.token) return;
+        state.loading = false;
+        $scanBtn.disabled = false;
+        $progressFill.style.width = '100%';
+        setTimeout(function () {$progressFill.style.width = '0%';}, 400);
+        setStatus('读取完成 · 基准 ' + state.baseAddr, 'ok');
+        computeColumnWidths();
+        renderVisible(true);
+        setTimeout(locateAnchor, 50);
+      }
+
+      function computeColumnWidths() {
+        var rows = state.rows;
+        if (!rows.length) return;
+        var maxChars = {offset: 6, addr: 12, hex: 10, I8: 6, I16: 8, I32: 12, I64: 22, F32: 14, F64: 22};
+        var sampleSize = Math.min(rows.length, 300);
+        for (var i = 0; i < sampleSize; i++) {
+          var row = rows[i]; if (!row) continue;
+          maxChars.offset = Math.max(maxChars.offset, (row.offset > 0 ? '+' : '').length + String(row.offset).length);
+          maxChars.addr = Math.max(maxChars.addr, row.addr.length);
+          maxChars.hex = Math.max(maxChars.hex, (row.hex || '').length);
+          for (var j = 0; j < TYPE_LIST.length; j++) {
+            var t = TYPE_LIST[j];
+            var display = (t === 'I64' && row.rawI64 != null) ? row.rawI64 : fmtNum(row.vals[j]);
+            maxChars[t] = Math.max(maxChars[t], display.length);
+          }
+        }
+        var charWidth = 7.2, padding = 16;
+        var minWidths = {offset: 40, addr: 80, hex: 88, I8: 40, I16: 46, I32: 60, I64: 100, F32: 70, F64: 100};
+        var widths = {};
+        widths.off = Math.max(minWidths.offset, maxChars.offset * charWidth + padding);
+        widths.addr = Math.max(minWidths.addr, maxChars.addr * charWidth + padding);
+        widths.hex = Math.max(minWidths.hex, maxChars.hex * charWidth + padding);
+        TYPE_LIST.forEach(function (t) {widths[t] = Math.max(minWidths[t], maxChars[t] * charWidth + padding);});
+        widths.str = 240;
+        state.colWidths = widths;
+        updateHeadWidths();
+      }
+
+      function updateHeadWidths() {
+        var w = state.colWidths;
+        var ths = $thead.children;
+        var idx = 0;
+        COLUMN_DEFS.forEach(function (col) {
+          if (!state.visibleCols[col.key]) return;
+          if (idx >= ths.length) return;
+          var el = ths[idx];
+          var width = null;
+          if (col.key === 'offset') width = w.off;
+          else if (col.key === 'addr') width = w.addr;
+          else if (col.key === 'hex') width = w.hex;
+          else if (col.key === 'str') width = w.str;
+          else width = w[col.key];
+          if (width != null) {el.style.minWidth = width + 'px'; el.style.width = width + 'px';}
+          idx++;
+        });
+      }
+
+      function buildRowHTML(row) {
+        if (!row._strLoaded) ensureRowString(row);
+        var w = state.colWidths, isBase = (row.offset === 0);
+        var cls = 'tr' + (isBase ? ' base-row' : '');
+        var h = '<div class="' + cls + '" style="height:' + ROW_HEIGHT + 'px">';
+
+        COLUMN_DEFS.forEach(function (col) {
+          if (!state.visibleCols[col.key]) return;
+          var key = col.key;
+          if (key === 'offset') {
+            h += '<div class="td offset" style="min-width:' + w.off + 'px;width:' + w.off + 'px">' +
+              (row.offset > 0 ? '+' : '') + row.offset + '</div>';
+          } else if (key === 'addr') {
+            h += '<div class="td addr" style="min-width:' + w.addr + 'px;width:' + w.addr + 'px">' + row.addr + '</div>';
+          } else if (key === 'hex') {
+            h += '<div class="td hex" style="min-width:' + w.hex + 'px;width:' + w.hex + 'px">' + (row.hex || '-') + '</div>';
+          } else if (key === 'str') {
+            var text = row.strText || '';
+            var encTag = row.strEnc ? ('<span class="enc-tag">' + escapeHtml(row.strEnc) + '</span>') : '';
+            var emptyCls = text ? '' : ' empty-str';
+            var title = text ? escapeHtml(text) + ' [' + row.strEnc + ']' : '（点击查看编码诊断）';
+            h += '<div class="td str' + emptyCls + '" data-off="' + row.offset + '" ' +
+              'style="min-width:' + w.str + 'px;width:' + w.str + 'px" title="' + title + '">' +
+              (text ? escapeHtml(text) + encTag : '·') + '</div>';
+          } else {
+            var ti = TYPE_LIST.indexOf(key);
+            if (ti < 0) return;
+            var v = row.vals[ti];
+            var nan = (typeof v !== 'number' || !isFinite(v));
+            var display = (key === 'I64' && row.rawI64 != null) ? row.rawI64 : fmtNum(v);
+            h += '<div class="td ' + col.className + (nan ? ' nan' : '') +
+              '" style="min-width:' + w[key] + 'px;width:' + w[key] + 'px">' + display + '</div>';
+          }
+        });
+        h += '</div>';
+        return h;
+      }
+
+      function renderVisible(force) {
+        var total = state.rows.length;
+        if (total === 0) return;
+        var scrollTop = $scroller.scrollTop, viewH = $scroller.clientHeight;
+        if (viewH === 0) return;
+        var startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 5);
+        var endIdx = Math.min(total, Math.ceil((scrollTop + viewH) / ROW_HEIGHT) + 5);
+        if (!force && startIdx === state.lastStart && endIdx === state.lastEnd) return;
+        state.lastStart = startIdx; state.lastEnd = endIdx;
+
+        ensureRangeStrings(startIdx, endIdx);
+
+        var html = '';
+        for (var i = startIdx; i < endIdx; i++) {
+          if (state.rows[i]) html += buildRowHTML(state.rows[i]);
+        }
+        $viewport.style.transform = 'translateY(' + (startIdx * ROW_HEIGHT) + 'px)';
+        $viewport.innerHTML = html;
+        updateHeadWidths();
+      }
+
+      // ★ 点击字符串单元格 → 打开编码诊断
+      $viewport.addEventListener('click', function (e) {
+        var td = e.target.closest('.td.str');
+        if (!td) return;
+        var off = parseInt(td.dataset.off, 10);
+        if (isNaN(off)) return;
+        var row = null;
+        for (var i = 0; i < state.rows.length; i++) {
+          if (state.rows[i] && state.rows[i].offset === off) {row = state.rows[i]; break;}
+        }
+        if (!row) return;
+        if (!row._strDecoded || !row._strBytes) {
+          // 强制重新诊断
+          row._strLoaded = false;
+          ensureRowString(row);
+        }
+        openDiag(row);
+      });
+
+      function openDiag(row) {
+        var bytes = row._strBytes || [];
+        var dec = row._strDecoded;
+        if (!dec) {
+          var r = decodeAuto(bytes);
+          dec = r;
+        }
+        $diagSub.textContent = '地址 ' + row.addr + ' · 读取 ' + bytes.length + ' 字节';
+        var hexStr = bytes.slice(0, 32).map(function (b) {return b.toString(16).padStart(2, '0');}).join(' ');
+        if (bytes.length > 32) hexStr += ' …';
+        $diagMeta.innerHTML =
+          '原始字节（前 32）：<br><code>' + escapeHtml(hexStr || '(空)') + '</code><br>' +
+          '最优：<code>' + escapeHtml(dec.enc) + '</code> · 分数 <code>' + dec.score.toFixed(1) + '</code>' +
+          (dec.text ? ' · 结果 <code>' + escapeHtml(dec.text) + '</code>' : ' · <span style="color:#f85149">判定不是字符串</span>');
+
+        var html = '';
+        var all = dec.all || [];
+        // 按分数降序
+        var sorted = all.slice().sort(function (a, b) {return b.score - a.score;});
+        for (var i = 0; i < sorted.length; i++) {
+          var it = sorted[i];
+          var isBest = (it === dec.all[0] || it.name === dec.enc);
+          var cls = 'diag-row' + (isBest ? ' best' : '') + (it.valid ? '' : ' invalid');
+          var textShow = it.text ? escapeHtml(it.text) : '—';
+          if (!it.valid) {
+            textShow = '（非法序列，已停止于第 ' + it.consumed + ' 字节）' + (it.text ? escapeHtml(it.text) : '');
+          }
+          html += '<div class="' + cls + '">' +
+            '<div class="enc">' + it.name + (it.bom ? '<span class="badge">BOM</span>' : '') + '</div>' +
+            '<div class="sc">' + (it.valid ? it.score.toFixed(1) : '—') + '</div>' +
+            '<div class="txt">' + textShow + '</div>' +
+            '</div>';
+        }
+        $diagList.innerHTML = html;
+        $diagMask.classList.add('show');
+      }
+
+      function closeDiag() {$diagMask.classList.remove('show');}
+
+      var scrollTicking = false;
+      $scroller.addEventListener('scroll', function () {
+        if (scrollTicking) return;
+        scrollTicking = true;
+        requestAnimationFrame(function () {scrollTicking = false; if (!state.loading) renderVisible(false);});
+      }, {passive: true});
+
+      var resizeTimer = null;
+      window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+          if (!state.loading && state.rows.length) {computeColumnWidths(); renderVisible(true);}
+        }, 150);
+      });
+
+      function setStatus(text, cls) {$statusText.textContent = text; $statusText.className = cls || '';}
+
+      function locateAnchor() {
+        if (!state.rows.length) {setStatus('请先读取内存数据', 'err'); return;}
+        var anchorIndex = 0;
+        for (var i = 0; i < state.rows.length; i++) {
+          if (state.rows[i] && state.rows[i].offset === 0) {anchorIndex = i; break;}
+        }
+        var targetTop = anchorIndex * ROW_HEIGHT - ($scroller.clientHeight / 2) + ROW_HEIGHT / 2;
+        targetTop = Math.max(0, Math.min(targetTop, $phantom.offsetHeight - $scroller.clientHeight));
+        $scroller.scrollTop = targetTop;
+        setTimeout(function () {renderVisible(true);}, 30);
+      }
+
+      function copyJSON() {
+        if (!state.rows.length) {setStatus('没有可复制的数据，请先读取', 'err'); return;}
+        var output = {
+          baseAddress: state.baseAddr, range: state.range, step: state.step,
+          direction: state.dir, strMaxBytes: state.strMaxBytes,
+          visibleCols: getVisibleColKeys(),
+          timestamp: new Date().toISOString(), rows: []
+        };
+        for (var i = 0; i < state.rows.length; i++) {
+          var row = state.rows[i]; if (!row) continue;
+          if (state.visibleCols.str && !row._strLoaded) ensureRowString(row);
+          var entry = {
+            offset: row.offset, address: row.addr, hex: row.hex,
+            str: row.strText || '', strEnc: row.strEnc || '',
+            values: {}
+          };
+          for (var j = 0; j < TYPE_LIST.length; j++) {
+            var t = TYPE_LIST[j], v = row.vals[j];
+            if (t === 'I64' && row.rawI64 != null) entry.values[t] = row.rawI64;
+            else entry.values[t] = (typeof v === 'number' && isFinite(v)) ? v : null;
+          }
+          output.rows.push(entry);
+        }
+        var jsonStr = JSON.stringify(output, null, 2);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(jsonStr).then(function () {
+            setStatus('JSON 已复制到剪贴板 (' + output.rows.length + ' 行)', 'ok');
+          }).catch(function () {fallbackCopy(jsonStr);});
+        } else fallbackCopy(jsonStr);
+      }
+
+      function fallbackCopy(text) {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; ta.style.left = '-9999px';
+          document.body.appendChild(ta); ta.select();
+          if (document.execCommand('copy')) setStatus('JSON 已复制 (兼容模式)', 'ok');
+          else setStatus('复制失败，请手动选择', 'err');
+          document.body.removeChild(ta);
+        } catch (e) {setStatus('复制失败: ' + e.message, 'err');}
+      }
+
+      // ==================== 列配置 ====================
+      function getVisibleColKeys() {
+        var arr = [];
+        COLUMN_DEFS.forEach(function (c) {if (state.visibleCols[c.key]) arr.push(c.key);});
+        return arr;
+      }
+
+      function defaultVisibleCols() {
+        var v = {};
+        COLUMN_DEFS.forEach(function (c) {v[c.key] = c.default;});
+        return v;
+      }
+
+      function loadColCfg() {
+        var stored = null;
+        try {stored = JSON.parse(localStorage.getItem(COL_CFG_KEY) || 'null');} catch (e) { }
+        state.visibleCols = defaultVisibleCols();
+        if (stored && typeof stored === 'object') {
+          COLUMN_DEFS.forEach(function (c) {
+            if (typeof stored[c.key] === 'boolean') state.visibleCols[c.key] = stored[c.key];
+            if (c.locked) state.visibleCols[c.key] = true;
+          });
+        }
+      }
+
+      function saveColCfg() {
+        try {localStorage.setItem(COL_CFG_KEY, JSON.stringify(state.visibleCols));} catch (e) { }
+      }
+
+      function applyColCfgChange() {
+        for (var i = 0; i < state.rows.length; i++) {
+          var row = state.rows[i];
+          if (row) {
+            row._strLoaded = false; row.strText = ''; row.strEnc = ''; row.strScore = 0;
+            row._strBytes = null; row._strDecoded = null;
+          }
+        }
+        buildHead();
+        updateHeadWidths();
+        if (state.rows.length) {
+          computeColumnWidths();
+          renderVisible(true);
+        }
+      }
+
+      function renderColCfgPanel() {
+        $colCfgGrid.innerHTML = '';
+        COLUMN_DEFS.forEach(function (col) {
+          var item = document.createElement('div');
+          var on = !!state.visibleCols[col.key];
+          item.className = 'colcfg-item' + (on ? ' on' : '');
+          item.dataset.key = col.key;
+          var smallDesc = col.locked ? '基础列（始终显示）' : col.desc;
+          item.innerHTML =
+            '<span class="box"></span>' +
+            '<span class="name">' + col.label + '<small>' + smallDesc + '</small></span>';
+          if (col.locked) {
+            item.style.cursor = 'not-allowed';
+            item.style.opacity = '.75';
+          } else {
+            item.addEventListener('click', function () {
+              state.visibleCols[col.key] = !state.visibleCols[col.key];
+              item.classList.toggle('on', state.visibleCols[col.key]);
+              saveColCfg();
+              applyColCfgChange();
+            });
+          }
+          $colCfgGrid.appendChild(item);
+        });
+      }
+
+      function openColCfg() {
+        renderColCfgPanel();
+        $colCfgMask.classList.add('show');
+      }
+      function closeColCfg() {$colCfgMask.classList.remove('show');}
+
+      function setAllVisible(val) {
+        COLUMN_DEFS.forEach(function (c) {
+          state.visibleCols[c.key] = c.locked ? true : val;
+        });
+        saveColCfg();
+        renderColCfgPanel();
+        applyColCfgChange();
+      }
+
+      function resetDefaultVisible() {
+        state.visibleCols = defaultVisibleCols();
+        saveColCfg();
+        renderColCfgPanel();
+        applyColCfgChange();
+      }
+
+      // ==================== 快照持久化 ====================
+      function genSnapshotId() {
+        var s = state.baseAddr + '|' + state.range + '|' + state.step + '|' + state.dir + '|' + Date.now() + '|' + Math.random();
+        var h = 0;
+        for (var i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+        return 'snap_' + (h >>> 0).toString(36) + '_' + Date.now().toString(36);
+      }
+
+      function loadSnapshots() {
+        try {state.snapshots = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');}
+        catch (e) {state.snapshots = [];}
+        if (!Array.isArray(state.snapshots)) state.snapshots = [];
+        renderSnapPanel();
+      }
+      function saveSnapshots() {
+        try {localStorage.setItem(STORE_KEY, JSON.stringify(state.snapshots));}
+        catch (e) {setStatus('保存失败：存储已满或不可用', 'err');}
+      }
+
+      function currentDataToSnapshot() {
+        if (!state.rows.length) return null;
+        var rows = state.rows.map(function (row) {
+          var vals = {};
+          TYPE_LIST.forEach(function (t, j) {
+            vals[t] = (t === 'I64' && row.rawI64 != null) ? row.rawI64
+              : ((typeof row.vals[j] === 'number' && isFinite(row.vals[j])) ? row.vals[j] : null);
+          });
+          return {offset: row.offset, addr: row.addr, hex: row.hex || null, vals: vals, rawI64: row.rawI64 || null};
+        });
+        return {
+          id: genSnapshotId(),
+          name: state.baseAddr + '  ±' + state.range + '/±' + state.step,
+          baseAddress: state.baseAddr,
+          baseNum: state.baseNum.toString(),
+          range: state.range,
+          step: state.step,
+          direction: state.dir,
+          timestamp: new Date().toISOString(),
+          rowCount: rows.length,
+          rows: rows
+        };
+      }
+
+      function doSaveSnapshot() {
+        if (!state.rows.length) {setStatus('没有数据可保存，请先读取', 'err'); return;}
+        state.snapshots.push(currentDataToSnapshot());
+        saveSnapshots();
+        renderSnapPanel();
+        setStatus('快照已保存（共 ' + state.snapshots.length + ' 个）锚点:' + state.baseAddr, 'ok');
+      }
+      function doClearSnapshots() {
+        if (!state.snapshots.length) return;
+        if (!confirm('确定清空所有 ' + state.snapshots.length + ' 个快照吗？')) return;
+        state.snapshots = [];
+        state.selectedSnapIds.clear();
+        saveSnapshots();
+        renderSnapPanel();
+        setStatus('快照已全部清空', 'ok');
+      }
+      function toggleSnapPanel() {$snapPanel.classList.toggle('show');}
+
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+          return ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c];
+        });
+      }
+
+      function renderSnapPanel() {
+        $snapList.innerHTML = '';
+        $snapCount.textContent = state.snapshots.length ? ('共 ' + state.snapshots.length + ' 个') : '';
+        state.snapshots.forEach(function (snap) {
+          var chip = document.createElement('div');
+          chip.className = 'snap-chip' + (state.selectedSnapIds.has(snap.id) ? ' selected' : '');
+          var date = new Date(snap.timestamp);
+          var timeStr = date.toLocaleString('zh-CN', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'});
+          chip.innerHTML =
+            '<span class="check"></span>' +
+            '<span class="anchor-badge">📌' + escapeHtml(snap.baseAddress) + '</span>' +
+            '<span class="meta"><span class="id">' + escapeHtml(snap.name) + '</span>' +
+            '<span class="sub">' + snap.rowCount + '行 · ' + timeStr + '</span></span>' +
+            '<span class="del" data-del="' + snap.id + '">✕</span>';
+          chip.addEventListener('click', function (e) {
+            if (e.target.dataset.del) return;
+            if (state.selectedSnapIds.has(snap.id)) state.selectedSnapIds.delete(snap.id);
+            else state.selectedSnapIds.add(snap.id);
+            chip.classList.toggle('selected');
+          });
+          chip.querySelector('[data-del]').addEventListener('click', function (e) {
+            e.stopPropagation();
+            state.snapshots = state.snapshots.filter(function (s) {return s.id !== snap.id;});
+            state.selectedSnapIds.delete(snap.id);
+            saveSnapshots();
+            renderSnapPanel();
+          });
+          $snapList.appendChild(chip);
+        });
+      }
+
+      // ============================================================
+      // 核心匹配逻辑（保持原样，字符串列不参与）
+      // ============================================================
+      function doMatch() {
+        var sel = state.snapshots.filter(function (s) {return state.selectedSnapIds.has(s.id);});
+        if (sel.length < 2) {
+          openModal();
+          showModalEmpty('请至少勾选 2 个快照进行对比匹配');
+          return;
+        }
+        setStatus('正在匹配特征码（' + sel.length + ' 个快照，从各自锚点出发）…', 'loading');
+
+        var allOffsets = Object.create(null);
+        sel.forEach(function (snap) {
+          snap.rows.forEach(function (row) {
+            allOffsets[row.offset] = true;
+          });
+        });
+
+        var offsetList = Object.keys(allOffsets).map(Number).sort(function (a, b) {return a - b;});
+        var results = [];
+
+        for (var oi = 0; oi < offsetList.length; oi++) {
+          var offset = offsetList[oi];
+          for (var ti = 0; ti < TYPE_LIST.length; ti++) {
+            var type = TYPE_LIST[ti];
+            var refSnap = sel[0];
+            var refRow = refSnap.rows.find(function (r) {return r.offset === offset;});
+            if (!refRow) continue;
+            var refVal = refRow.vals[type];
+            if (refVal === null || refVal === undefined) continue;
+            var refKey = valueToKey(type, refVal, refRow.rawI64);
+            if (isNoise(type, refKey)) continue;
+
+            var matchCount = 1;
+            var matchSnapshots = [refSnap.name];
+
+            for (var si = 1; si < sel.length; si++) {
+              var snap = sel[si];
+              var row = snap.rows.find(function (r) {return r.offset === offset;});
+              if (!row) continue;
+              var cmpVal = row.vals[type];
+              if (cmpVal === null || cmpVal === undefined) continue;
+              var cmpKey = valueToKey(type, cmpVal, row.rawI64);
+              if (cmpKey === refKey) {
+                matchCount++;
+                matchSnapshots.push(snap.name);
+              }
+            }
+
+            if (matchCount >= 2) {
+              results.push({
+                offset: offset, type: type, refKey: refKey, refVal: refVal,
+                refRawI64: refRow.rawI64, matchCount: matchCount,
+                totalSnapshots: sel.length, matchSnapshots: matchSnapshots
+              });
+            }
+          }
+        }
+
+        if (!results.length) {
+          setStatus('未找到特征码：没有在所有快照中匹配的值', 'err');
+          openModal();
+          showModalEmpty('未找到特征码。尝试：保存更多不同锚点的快照，或检查内存值是否确实不变。');
+          return;
+        }
+
+        results.sort(function (a, b) {
+          if (b.matchCount !== a.matchCount) return b.matchCount - a.matchCount;
+          var absA = Math.abs(a.offset), absB = Math.abs(b.offset);
+          if (absA !== absB) return absA - absB;
+          var pa = typePriority(a.type), pb = typePriority(b.type);
+          if (pa !== pb) return pa - pb;
+          return TYPE_LIST.indexOf(a.type) - TYPE_LIST.indexOf(b.type);
+        });
+
+        setStatus('匹配完成：' + results.length + ' 个特征码（' + sel.length + ' 个快照）', 'ok');
+        renderModal(results, sel);
+        openModal();
+      }
+
+      function isNoise(type, key) {
+        if (key === 'NaN') return true;
+        if (key.indexOf(':NaN') !== -1) return true;
+        if (type === 'I8' || type === 'I16' || type === 'I32') {
+          var num = parseInt(key.split(':')[1], 10);
+          if (num === 0) return true;
+        }
+        if (type === 'I64') {
+          try {var n = BigInt(key.replace(/^I64:/, '')); if (n === 0n) return true;} catch (e) { }
+        }
+        if (type === 'F32' || type === 'F64') {
+          var hex = key.split(':')[1] || '';
+          var hi = parseInt(hex.slice(0, 8), 16) | 0;
+          var lo = parseInt(hex.slice(8, 16), 16) | 0;
+          if (hi === 0 && lo === 0) return true;
+          if ((hi & 0x7ff00000) === 0x7ff00000) return true;
+        }
+        return false;
+      }
+
+      function typePriority(type) {
+        if (type === 'I32' || type === 'I64') return 1;
+        if (type === 'F32' || type === 'F64') return 2;
+        if (type === 'I16') return 3;
+        return 4;
+      }
+
+      function openModal() {$modalMask.classList.add('show');}
+      function closeModal() {$modalMask.classList.remove('show');}
+
+      function showModalEmpty(msg) {
+        $modalEmptyText.textContent = msg;
+        $modalEmpty.style.display = 'flex';
+        $modalScroll.innerHTML = '';
+        $modalScroll.appendChild($modalEmpty);
+        $sigThead.innerHTML = '';   // ← 加这行，空状态不显示表头
+        $modalSub.textContent = '从各快照各自锚点出发，匹配次数越多、离锚点越近越靠前';
+      }
+
+      function renderModal(results, sel) {
+        $modalEmpty.style.display = 'none';
+
+        // ---- 表头：放到滚动区外面的固定层 ----
+        $sigThead.innerHTML =
+          '<div class="th" style="min-width:40px;width:40px">序</div>' +
+          '<div class="th" style="min-width:50px;width:50px">匹配</div>' +
+          '<div class="th" style="min-width:52px;width:52px">类型</div>' +
+          '<div class="th addr" style="min-width:110px;width:110px">锚点</div>' +
+          '<div class="th addr" style="min-width:160px;width:160px">内存地址</div>' +
+          '<div class="th offset" style="min-width:60px;width:60px">偏移</div>' +
+          '<div class="th" style="min-width:200px;width:200px">特征值</div>' +
+          '<div class="th" style="min-width:80px;width:80px">匹配快照</div>';
+
+        // ---- 数据行 ----
+        var html = '';
+        for (var i = 0; i < results.length; i++) {
+          var r = results[i];
+          var isAnchor = (r.offset === 0);
+          var refSnap = sel[0];
+          var addrBig = BigInt(refSnap.baseNum || parseHexAddr(refSnap.baseAddress).num) + BigInt(r.offset);
+          var realAddr = toHex(addrBig);
+          var displayVal = formatDisplayValue(r.type, r.refVal, r.refRawI64, r.refKey);
+
+          html += '<div class="sig-row' + (isAnchor ? ' anchor-row' : '') + '">' +
+            '<div class="td" style="min-width:40px;width:40px;color:#6e7681">' + (i + 1) + '</div>' +
+            '<div class="td" style="min-width:50px;width:50px"><span class="pri p' + (r.matchCount >= sel.length ? '1' : r.matchCount >= 3 ? '2' : '3') + '">' + r.matchCount + '/' + sel.length + '</span></div>' +
+            '<div class="td" style="min-width:52px;width:52px;color:#d2a8ff;font-weight:600">' + r.type + '</div>' +
+            '<div class="td anchor" style="min-width:110px;width:110px">' + refSnap.baseAddress + (isAnchor ? ' 📌' : '') + '</div>' +
+            '<div class="td addr" style="min-width:160px;width:160px">' + realAddr + '</div>' +
+            '<div class="td rel" style="min-width:60px;width:60px">' + (r.offset > 0 ? '+' : '') + r.offset + '</div>' +
+            '<div class="td val-match" style="min-width:200px;width:200px">' + displayVal + '</div>' +
+            '<div class="td" style="min-width:80px;width:80px;color:#8b949e;font-size:10px">' + r.matchCount + '个</div>' +
+            '</div>';
+        }
+
+        $modalScroll.innerHTML = html;
+        $modalScroll.scrollTop = 0;      // 新结果回到顶部
+        $modalSub.textContent = '共 ' + results.length + ' 个特征码 · 匹配次数降序 · 偏移升序 · 从各快照锚点出发';
+        syncSigTheadScroll();
+      }
+
+      function syncSigTheadScroll() {
+        // 让表头内部横向偏移跟数据区一致
+        $sigThead.scrollLeft = $modalScroll.scrollLeft;
+      }
+      $modalScroll.addEventListener('scroll', syncSigTheadScroll, {passive: true});
+
+      function formatDisplayValue(type, val, rawI64, key) {
+        if (type === 'I64' && rawI64 != null) {
+          try {return BigInt(rawI64).toString();} catch (e) {return rawI64;}
+        }
+        if (type === 'F32' || type === 'F64') {
+          if (typeof val === 'number' && isFinite(val)) return fmtNum(val);
+          return key.split(':')[1] || '?';
+        }
+        if (typeof val === 'number' && isFinite(val)) return String(Math.floor(val));
+        return '?';
+      }
+
+      // ==================== 事件绑定 ====================
+      $scanBtn.addEventListener('click', startScan);
+      $addrInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {e.preventDefault(); $addrInput.blur(); startScan();}
+      });
+      $locateBtn.addEventListener('click', locateAnchor);
+      $copyJsonBtn.addEventListener('click', copyJSON);
+
+      $saveSnapBtn.addEventListener('click', doSaveSnapshot);
+      $toggleSnapBtn.addEventListener('click', toggleSnapPanel);
+      $matchBtn.addEventListener('click', doMatch);
+      $clearSnapBtn.addEventListener('click', doClearSnapshots);
+
+      $modalCloseBtn.addEventListener('click', closeModal);
+      $modalMask.addEventListener('click', function (e) {if (e.target === $modalMask) closeModal();});
+
+      $colCfgBtn.addEventListener('click', openColCfg);
+      $colCfgCloseBtn.addEventListener('click', closeColCfg);
+      $colCfgMask.addEventListener('click', function (e) {if (e.target === $colCfgMask) closeColCfg();});
+      $colCfgAllBtn.addEventListener('click', function () {setAllVisible(true);});
+      $colCfgNoneBtn.addEventListener('click', function () {setAllVisible(false);});
+      $colCfgDefaultBtn.addEventListener('click', resetDefaultVisible);
+
+      $diagCloseBtn.addEventListener('click', closeDiag);
+      $diagMask.addEventListener('click', function (e) {if (e.target === $diagMask) closeDiag();});
+
+      $rangeGroup.addEventListener('click', function (e) {
+        var seg = e.target.closest('.seg'); if (!seg) return;
+        Array.prototype.forEach.call($rangeGroup.children, function (c) {c.classList.toggle('active', c === seg);});
+        state.range = parseInt(seg.dataset.range, 10);
+        if (state.baseAddr) startScan();
+      });
+      $stepGroup.addEventListener('click', function (e) {
+        var seg = e.target.closest('.seg'); if (!seg) return;
+        Array.prototype.forEach.call($stepGroup.children, function (c) {c.classList.toggle('active', c === seg);});
+        state.step = parseInt(seg.dataset.step, 10);
+        state.dir = seg.dataset.dir;
+        if (state.baseAddr) startScan();
+      });
+
+      $strLenGroup.addEventListener('click', function (e) {
+        var seg = e.target.closest('.seg'); if (!seg) return;
+        Array.prototype.forEach.call($strLenGroup.children, function (c) {c.classList.toggle('active', c === seg);});
+        state.strMaxBytes = parseInt(seg.dataset.len, 10);
+        for (var i = 0; i < state.rows.length; i++) {
+          var row = state.rows[i];
+          if (row) {
+            row._strLoaded = false; row.strText = ''; row.strEnc = ''; row.strScore = 0;
+            row._strBytes = null; row._strDecoded = null;
+          }
+        }
+        if (state.rows.length) {
+          renderVisible(true);
+          setStatus('字符串最大字节数已改为 ' + state.strMaxBytes, 'ok');
+        }
+      });
+
+      // ==================== 初始化 ====================
+      loadColCfg();
+      buildHead();
+      updateHeadWidths();
+      loadSnapshots();
+      if (isH5GG()) setStatus('H5GG 环境就绪，请输入地址', 'ok');
+      else setStatus('未检测到 h5gg（在 H5GG 内运行才能读取内存）', 'err');
+
+    })();
+  </script>
+</body>
+
+</html>

@@ -1245,7 +1245,7 @@
 		background: rgba(255, 255, 255, 0.75);
 		border: 1px solid rgba(0, 0, 0, 0.08);
 		border-radius: 8px;
-		padding: 6px 8px;
+		padding: 4px;
 		display: flex;
 		flex-direction: column;
 		gap: 3px;
@@ -1490,12 +1490,12 @@
 		transform: rotate(90deg);
 	}
 
-	/* 网格：自动填充，每列最小 64px */
+	/* 网格：自动填充，每列最小 58px */
 	.magic-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-		gap: 4px;
-		padding: 4px 0 4px;
+		grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+		gap: 2px;
+		padding: 2px 0 2px;
 	}
 
 	/* 单个图标单元 */
@@ -1504,7 +1504,7 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 4px;
+		gap: 2px;
 		padding: 4px 0px;
 		border-radius: 8px;
 		background: rgba(255, 255, 255, 0.55);

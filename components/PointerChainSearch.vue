@@ -63,7 +63,7 @@
 					📁 本地标识
 				</button>
 
-				<a id="gotoWeb" href="https://env-00jy6kq4uyns-static.normal.cloudstatic.cn/桶.html" target="_blank"
+				<a id="gotoWeb" href="/static/桶.html" target="_blank"
 					rel="noopener" @touchstart="preventTouch">跳转特征码对比</a>
 			</view>
 
