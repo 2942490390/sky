@@ -56,7 +56,7 @@
                             <text class="card-value"
                                 :class="{ 'value-bad': item.value === '' || item.value === undefined || item.value === '0x0' }">
                                 {{ (item.value === '' || item.value === undefined || item.value === '0x0') ? '—' :
-                                item.value }}
+                                    item.value }}
                             </text>
                         </view>
                         <view class="card-row4">
@@ -81,6 +81,9 @@ import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import {
     groupedEntries, stats, GROUPS, refreshValues
 } from '@/common/addressRegistry.js'
+import { copyWithToast } from '@/utils/clipboard.js'
+import { readMapName } from '@/common/str-tool/strReader.js'
+
 
 const keyword = ref('')
 const filterMode = ref('all')
@@ -120,10 +123,7 @@ function toggleGroup(key) {
 
 function copyText(text) {
     if (!text) return
-    uni.setClipboardData({
-        data: text,
-        success: () => uni.showToast({ title: '已复制', icon: 'success', duration: 800 })
-    })
+    copyWithToast(text, '已复制')
 }
 
 function fmtTime(ts) {
@@ -140,7 +140,12 @@ const REFRESH_INTERVAL = 1000
 function doRefreshValues() {
     if (typeof h5gg === 'undefined') return
     try {
-        refreshValues((hex, type) => h5gg.getValue(hex, type))
+        refreshValues((hex, type) => {
+            if (type === 'STR' || type === 'STRING') {
+                return readMapName(hex)
+            }
+            return h5gg.getValue(hex, type)
+        })
     } catch (e) { }
 }
 

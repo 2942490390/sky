@@ -313,6 +313,7 @@ const AD_MAP_NAMES = {
     '1137190502': '公寓',
 }
 
+let adRymAddr = null
 let adRym = null
 let adStrAddr = null
 let adFlag1Addr = null
@@ -344,8 +345,19 @@ async function adGetCurrentMap() {
         const mapIdAddrHex = '0x' + mapIdBig.toString(16)
         // 从内存中读取当前地图ID
         const curMapId = Number(h5gg.getValue(mapIdAddrHex, 'I32'))
-        // 根据地图ID获取地图名称，如果找不到则使用未知格式
+
+        // ★ 注册"当前地图ID"（数值）
+        setAddr('mapId', mapIdAddrHex, { type: 'I32' })
+
+        // ★ 注册"当前地图名"（字符串，由 ID 映射，不走内存读）
         const curMapName = mapIdToName[String(curMapId)] || ('未知(' + curMapId + ')')
+        setAddr('mapName', mapIdAddrHex, {
+            type: 'STRING',
+            derive: (getValueFn) => {
+                const id = Number(getValueFn(mapIdAddrHex, 'I32'))
+                return mapIdToName[String(id)] || ('未知(' + id + ')')
+            }
+        })
         // 获取当前地图的签名，如果找不到则为null
         const sig = AD_MAP_SIGNATURES[String(curMapId)] || null
         // 返回包含完整地图信息的对象
@@ -484,11 +496,11 @@ function adLocateBySignature(searchValue) {
             console.warn('[任意门] 特征码 ' + searchValue + ' 的所有候选都不像关卡名')
             return false
         }
-
-        adRym = chosen.baseAddr + 4
-        adStrAddr = adRym + AD_STR_OFFSET
-        adFlag1Addr = adRym + AD_FLAG1_OFFSET
-        adFlag2Addr = adRym + AD_FLAG2_OFFSET
+        adRymAddr = chosen.baseAddr
+        adRym = chosen.baseAddr + 4 // 读取随机数地址
+        adStrAddr = adRym + AD_STR_OFFSET // 读取字符串地址
+        adFlag1Addr = adRym + AD_FLAG1_OFFSET // 读取标志1地址
+        adFlag2Addr = adRym + AD_FLAG2_OFFSET // 读取标志2地址
 
         console.log('[任意门] 选定 baseAddr=0x' + chosen.baseAddr.toString(16) +
             ', rym=0x' + adRym.toString(16) +
@@ -535,7 +547,7 @@ export async function initAnyDoor() {
     adInited = ok
     if (ok) {
         adCurrentMapId = cur.id
-        setAddr('任意门特征码', adRym, { type: 'BASE' })
+        setAddr('任意门特征码', adRymAddr, { type: 'I32' })
         setAddr('任意门字符串', adStrAddr, { type: 'STR' })
         console.log('[任意门] 缓存成功，来源地图: ' + cur.name)
     }

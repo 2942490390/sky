@@ -4,6 +4,8 @@
 
 import { point } from './getPoint.js'
 import { setAddr, ADDR_META } from './addressRegistry.js'
+import { readMapName } from './str-tool/strReader.js'
+
 
 // ============================================================
 // h5gg 环境兜底
@@ -118,25 +120,46 @@ export function getModuleAddr(off) {
 }
 
 /**
- * 同步获取指针地址（自动 setAddr 上报给 DevMonitor）
+ * 同步获取内存地址的函数
+ * @param {string} key - 用于标识内存地址的键值
+ * @returns {number|null} 返回计算后的内存地址，如果过程中出现任何问题则返回null
  */
 function getPtrSync(key) {
+	// 检查Offsets是否存在，不存在则直接返回null
 	if (!Offsets) return null
+	// 根据key获取配置信息，不存在则返回null
 	const cfg = Offsets[key]
 	if (!cfg) return null
+	// 获取主模块句柄，不存在则返回null
 	const main = getMain()
 	if (!main) return null
+
+	// 计算基础地址
 	let addr = Number(main.mainBase) + cfg[0]
+	// 获取偏移链
 	const chain = cfg[1]
+	// 遍历偏移链，计算最终地址
 	for (let i = 0; i < chain.length - 1; i++) {
 		addr = addrjump(addr) + chain[i]
 	}
+	// 计算最终地址
 	const finalAddr = addrjump(addr) + chain[chain.length - 1]
+	// 获取地址元数据
 	const meta = ADDR_META[key]
-	setAddr(key, finalAddr, { type: meta ? meta.type : 'BASE' })
+	// 获取数据类型，默认为'BASE'
+	const type = meta ? meta.type : 'BASE'
+
+	// ★ STR 类型：读字符串并上报
+	if (type === 'STR' || type === 'STRING') {
+		const addrHex = '0x' + finalAddr.toString(16)
+		const str = readMapName(addrHex)
+		setAddr(key, finalAddr, { type: 'STR', value: str })
+		return finalAddr
+	}
+
+	setAddr(key, finalAddr, { type })
 	return finalAddr
 }
-
 export async function getPtr(key) {
 	await ensureOffsets()
 	return getPtrSync(key)

@@ -125,7 +125,6 @@
 
 <script setup>
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
-
 import {
 	applyNewConfig,
 	exportAsJS,
@@ -137,12 +136,12 @@ import {
 	saveOffsets,
 	syncHashSilently
 } from '@/common/offsetsStore.js'
-
+import { copyWithToast } from '@/utils/clipboard.js'
 import { getLabel } from '@/common/functionLabels.js'
 import { clearAllAddrCache, clearOffsets } from '@/common/h5gg.js'
 import { checkHeader, filterStableChains, parseText, toChainPair } from '@/common/pointerImporter.js'
 import { extractFile, readFileStream } from '@/common/fileStreamReader.js'
-import PageDevMonitor  from './PageDevMonitor.vue'
+import PageDevMonitor from './PageDevMonitor.vue'
 
 const listHeight = ref(300)
 const scrollTop = ref(0)
@@ -652,12 +651,7 @@ function onReset() {
 function onCopy() {
 	const offsets = loadOffsets()
 	const jsCode = exportAsJS(offsets)
-	uni.setClipboardData({
-		data: jsCode,
-		success: () => {
-			uni.showToast({ title: '已复制到剪贴板', icon: 'success' })
-		}
-	})
+	copyWithToast(jsCode, '已复制到剪贴板')
 }
 
 // ================= 导入指针链 =================

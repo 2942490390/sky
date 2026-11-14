@@ -56,9 +56,9 @@
 </template>
 
 <script setup>
-import {onUnmounted, reactive} from 'vue'
-import {fireworkV2, igniteLoop, ignoreKrillLoop, stopIgniteLoop, stopIgnoreKrillLoop} from '@/common/entertainment.js'
-import {startAllActions, startShrineUnlock, stopPacketBatch} from '@/common/packetSender.js'
+import { onUnmounted, reactive } from 'vue'
+import { fireworkV2, igniteLoop, ignoreKrillLoop, stopIgniteLoop, stopIgnoreKrillLoop } from '@/common/entertainment.js'
+import { startAllActions, startShrineUnlock, stopPacketBatch } from '@/common/packetSender.js'
 
 const swState = reactive({ wxyh: false, ignite: false, krill: false })
 

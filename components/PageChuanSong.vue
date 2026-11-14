@@ -151,7 +151,6 @@ async function warp(spot) {
 		const verified = await waitAnyDoorVerify(spot.anyDoorCode, 6000)
 		if (verified) {
 			setStatus(`✅ 任意门传送成功：${spot.name}`, 'ok')
-			uni.showToast({ icon: 'none', title: '✅ 任意门传送成功' })
 		} else {
 			setStatus(`❌ 写入成功但游戏未切到目标关卡`, 'fail')
 			uni.showToast({ icon: 'none', title: '未生效' })

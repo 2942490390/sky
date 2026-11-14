@@ -27,7 +27,6 @@ export const ADDR_META = {
     coordX: { label: '坐标 X', group: 'coordinate', type: 'F32', desc: 'rwdz + 0' },
     coordZ: { label: '坐标 Z', group: 'coordinate', type: 'F32', desc: 'rwdz + 4' },
     coordY: { label: '坐标 Y', group: 'coordinate', type: 'F32', desc: 'rwdz + 8' },
-    mapId: { label: '当前地图ID', group: 'coordinate', type: 'I32', desc: 'rwdz + 24812' },
     flagAddr: { label: '坐标特征值', group: 'coordinate', type: 'HEX', desc: '缓存校验用' },
 
     // --- 运动 ---
@@ -83,6 +82,9 @@ export const ADDR_META = {
     nldSelf0: { label: '自身·自身炸', group: 'shield', type: 'F32', desc: 'player1 +0x114' },
 
     // --- 其他 ---
+    mapId: { label: '当前地图ID', group: 'other', type: 'I32', desc: 'rwdz + 24812' },
+    mapName: { label: '当前地图名', group: 'other', type: 'STRING', desc: 'rwdz + 24812' },
+
 }
 
 // ============ 动态补充 meta（能量盾 8 人 + 魔法 9 槽）============
@@ -115,34 +117,85 @@ const state = reactive({
 })
 
 // ============ 注册 / 更新 ============
+/**
+ * 设置或更新内存地址信息
+ * @param {string} key - 地址标识符
+ * @param {number|string} addr - 内存地址，可以是数字或16进制字符串
+ * @param {Object} [opts={}] - 可选配置对象
+ * @param {string} [opts.type] - 地址类型
+ * @param {*} [opts.value] - 地址值
+ * @param {string} [opts.note] - 地址备注
+ * @param {boolean} [opts.ok] - 地址是否有效
+ * @param {boolean} [opts.noRefresh] - 是否禁用自动刷新
+ */
 export function setAddr(key, addr, opts = {}) {
+    // 如果 ADDR_META 中没有该 key 的元数据，则创建默认元数据
     if (!ADDR_META[key]) {
-        ADDR_META[key] = { label: key, group: 'other', type: opts.type || 'BASE', desc: '' }
+        ADDR_META[key] = {
+            label: key,
+            group: 'other',
+            type: opts.type || 'BASE',
+            desc: ''
+        }
     }
-    let num = 0
-    let hex = ''
+
+    let num = 0  // 存储数字格式的地址
+    let hex = ''  // 存储16进制格式的地址
+
+    // 处理数字类型的地址
     if (typeof addr === 'number' && Number.isFinite(addr) && addr > 0) {
         num = addr
         hex = '0x' + addr.toString(16)
-    } else if (typeof addr === 'string' && /^0x[0-9a-fA-F]+$/.test(addr)) {
+    }
+    // 处理16进制字符串类型的地址
+    else if (typeof addr === 'string' && /^0x[0-9a-fA-F]+$/.test(addr)) {
         hex = addr.toLowerCase()
-        try { num = parseInt(addr, 16) } catch (e) { num = 0 }
+        try {
+            num = parseInt(addr, 16)
+        } catch (e) {
+            num = 0
+        }
     }
 
+    // 获取之前的地址信息
     const prev = state.entries[key]
+    // 检查地址是否与之前相同
     const sameAddr = prev && prev.num === num && num > 0
 
+    // 更新地址信息
     state.entries[key] = {
-        key,
-        hex: hex || '',
-        num,
-        type: opts.type || (prev && prev.type) || ADDR_META[key].type || 'BASE',
-        // ★ value 初始不再用业务传的 value（业务传的多半是"写入值"，不是真实内存值）
-        // 保留 prev.value 是为了防止 refreshValues 还没跑时被清空
-        value: prev ? prev.value : '',
+        key,  // 地址标识符
+        hex: hex || '',  // 16进制地址
+        num,  // 数字地址
+        type: opts.type || (prev && prev.type) || ADDR_META[key].type || 'BASE',  // 地址类型
+
+        // ★ value 字段的特殊处理：
+        // 1. 如果 opts 中传入了 value，则使用传入的值
+        // 2. 否则保留之前的值，防止 refreshValues 还没运行时被清空
+        value: opts.value !== undefined
+            ? opts.value
+            : (prev ? prev.value : ''),
+
+        // 备注信息，优先使用 opts 中的值，其次使用之前的值
         note: opts.note !== undefined ? opts.note : (prev ? prev.note : ''),
+
+        // 地址是否有效，优先使用 opts 中的值，其次根据地址是否大于0判断
         ok: opts.ok !== undefined ? opts.ok : (num > 0),
+
+        // 是否禁用自动刷新，优先使用 opts 中的值，其次使用之前的值
+        noRefresh: opts.noRefresh !== undefined
+            ? opts.noRefresh
+            : (prev ? prev.noRefresh : false),
+
+        derive: opts.derive !== undefined
+            ? opts.derive
+            : (prev ? prev.derive : null),
+
+        // 时间戳：如果地址相同则保持原时间戳，否则使用当前时间
         ts: sameAddr ? prev.ts : Date.now(),
+
+        // 历史记录：如果地址相同则保留原历史记录，否则创建新的历史记录
+        // 只保留最近4条有效记录（非空且非0地址）
         history: sameAddr
             ? (prev.history || [])
             : (prev ? [...(prev.history || []).slice(-4), { hex: prev.hex, ts: prev.ts }].filter(x => x.hex && x.hex !== '0x0') : []),
@@ -217,6 +270,16 @@ export function refreshValues(getValueFn) {
     for (const key in state.entries) {
         const e = state.entries[key]
         if (!e.hex) continue
+        if (e.noRefresh) continue
+        // 有 derive 的，走 derive 计算，不读内存
+        if (typeof e.derive === 'function') {
+            try {
+                const v = e.derive(getValueFn)
+                const sv = v == null ? '' : String(v)
+                if (e.value !== sv) e.value = sv
+            } catch (err) { }
+            continue
+        }
 
         try {
             let v = null
@@ -267,6 +330,11 @@ export function refreshValues(getValueFn) {
             // ★ I64/U64 保留原样（可能是字符串）
             else if (e.type === 'I64' || e.type === 'U64') {
                 const raw = getValueFn(e.hex, e.type)
+                if (raw === null || raw === undefined) continue
+                v = String(raw)
+            }
+            else if (e.type === 'STR' || e.type === 'STRING') {
+                const raw = getValueFn(e.hex, 'STR')
                 if (raw === null || raw === undefined) continue
                 v = String(raw)
             }

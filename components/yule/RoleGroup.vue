@@ -87,8 +87,7 @@
                 <text class="fa-solid fa-eye-slash"></text>
                 <text>隐身</text>
             </view>
-            <switch :checked="swState.invisible" color="#FFD966" style="transform: scale(0.75)"
-                @change="onInvisible" />
+            <switch :checked="swState.invisible" color="#FFD966" style="transform: scale(0.75)" @change="onInvisible" />
         </view>
 
         <!-- 守护无翼 -->
@@ -305,52 +304,53 @@
 </template>
 
 <script setup>
-import {onUnmounted, reactive, ref} from 'vue'
+import { onUnmounted, reactive, ref } from 'vue'
+import { copyWithToast } from '@/utils/clipboard.js'
 import {
-  clearBigJumpAddr,
-  clearWingBurstAddr,
-  setBigJump,
-  setPlayerGlow,
-  setWingBurst,
-  setWingCount,
-  setWY,
-  stopBigJumpLoop
+    clearBigJumpAddr,
+    clearWingBurstAddr,
+    setBigJump,
+    setPlayerGlow,
+    setWingBurst,
+    setWingCount,
+    setWY,
+    stopBigJumpLoop
 } from '@/common/h5gg.js'
 
 import {
-  fmtAddr,
-  getAllStates,
-  getBaseAddr,
-  getMainAddrList,
-  getOtherAddrList,
-  getSelfAddrList,
-  initEnergyShield,
-  isInitialized,
-  setAllEnergyShield,
-  setEnergyShield,
-  stopAllEnergyShield
+    fmtAddr,
+    getAllStates,
+    getBaseAddr,
+    getMainAddrList,
+    getOtherAddrList,
+    getSelfAddrList,
+    initEnergyShield,
+    isInitialized,
+    setAllEnergyShield,
+    setEnergyShield,
+    stopAllEnergyShield
 } from '@/common/energyShield.js'
 
 import {
-  closeAllMagic,
-  fmtAddr as fmtMagicAddr,
-  getMagicAddrList,
-  getMagicCountAddr,
-  getSlotState,
-  initMagic,
-  isMagicInitialized,
-  toggleMagic
+    closeAllMagic,
+    fmtAddr as fmtMagicAddr,
+    getMagicAddrList,
+    getMagicCountAddr,
+    getSlotState,
+    initMagic,
+    isMagicInitialized,
+    toggleMagic
 } from '@/common/magic.js'
 
-import {MAGIC_ITEMS, MAGIC_ITEMS_Length, MAGIC_SLOT_TITLES} from '@/common/magicData_all.js'
+import { MAGIC_ITEMS, MAGIC_ITEMS_Length, MAGIC_SLOT_TITLES } from '@/common/magicData_all.js'
 
 import {
-  antiReportLoop,
-  energyLoopV2,
-  friendTreeLoop,
-  invisibleLoop,
-  noWingGuardLoop,
-  stopAllEntertainment
+    antiReportLoop,
+    energyLoopV2,
+    friendTreeLoop,
+    invisibleLoop,
+    noWingGuardLoop,
+    stopAllEntertainment
 } from '@/common/entertainment.js'
 
 // ===== 开关状态 =====
@@ -426,7 +426,7 @@ function copyAddr(addr) {
         return
     }
     const str = '0x' + n.toString(16)
-    uni.setClipboardData({ data: str, success: () => uni.showToast({ icon: 'success', title: '已复制 ' + str, duration: 800 }) })
+    copyWithToast(str, '已复制 ' + str)
 }
 
 async function initShield() {
@@ -535,7 +535,7 @@ function copyMagicAddr(addr) {
         return
     }
     const str = '0x' + n.toString(16)
-    uni.setClipboardData({ data: str, success: () => uni.showToast({ icon: 'success', title: '已复制 ' + str, duration: 800 }) })
+    copyWithToast(str, '已复制 ' + str)
 }
 
 // ===== 业务函数 =====

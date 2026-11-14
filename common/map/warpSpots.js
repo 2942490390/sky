@@ -8,7 +8,7 @@ export const subMapData = {
 		name: "遇境",
 		spots: [
 			{ name: "遇境", warpId: "CandleSpace", anyDoorCode: "CandleSpace" },
-			{ name: "小镇", warpId: "MainStreet", anyDoorCode: "MainStreet" },
+			{ name: "云巢", warpId: "MainStreet", anyDoorCode: "MainStreet" },
 			{ name: "飞行指引", warpId: "MainStreetFlyingIntro", anyDoorCode: "MainStreetFlyingIntro" },
 			{ name: "筑巢工坊-服装", warpId: "MainStreet_ShopOutfits", anyDoorCode: "MainStreet_ShopOutfits" },
 			{ name: "筑巢工坊-魔法", warpId: "MainStreet_ShopSpells", anyDoorCode: "MainStreet_ShopSpells" },

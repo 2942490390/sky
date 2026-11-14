@@ -254,6 +254,8 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, triggerRef } from 'vue'
 import { defineAsyncComponent } from 'vue'
 const NearbyScan = defineAsyncComponent(() => import('./utilComponent/NearbyScan.vue'))
+import { copyText } from '@/utils/clipboard.js'
+
 
 // 覆盖层开关
 const nearVisible = ref(false)
@@ -1229,53 +1231,14 @@ function onParseFiltered() {
 }
 function closeParseModal() { parseModalVisible.value = false }
 
-
 function copyToClipboard(text) {
-	if (typeof text !== 'string' || !text.trim()) {
-		uni.showToast({ title: '复制内容为空', icon: 'none' })
-		return
-	}
-
-	// 1. 优先使用现代浏览器 API（需要 HTTPS 和用户手势）
-	if (navigator.clipboard && window.isSecureContext) {
-		navigator.clipboard.writeText(text).then(() => {
-			uni.showToast({ title: '已复制', icon: 'success', duration: 1200 })
-		}).catch((err) => {
-			console.warn('navigator.clipboard 失败，尝试回退', err)
-			// fallbackCopy(text)
-		})
-	} else {
-		// 2. 回退方案：使用临时 textarea + execCommand
-		fallbackCopy(text)
-	}
-}
-
-function fallbackCopy(text) {
-	const textarea = document.createElement('textarea')
-	textarea.value = text
-	textarea.style.position = 'fixed'
-	textarea.style.left = '-9999px'
-	textarea.style.top = '0'
-	document.body.appendChild(textarea)
-
-	// iOS Safari 需要先 focus 再 select
-	textarea.focus()
-	textarea.select()
-	textarea.setSelectionRange(0, text.length)
-
-	try {
-		const successful = document.execCommand('copy')
-		if (successful) {
-			uni.showToast({ title: '已复制', icon: 'success', duration: 1200 })
-		} else {
-			uni.showToast({ title: '复制失败，请长按手动复制', icon: 'none' })
-		}
-	} catch (err) {
-		console.error('execCommand 失败', err)
-		uni.showToast({ title: '复制失败，请长按手动复制', icon: 'none' })
-	} finally {
-		document.body.removeChild(textarea)
-	}
+  if (typeof text !== 'string' || !text.trim()) {
+    uni.showToast({ title: '复制内容为空', icon: 'none' })
+    return
+  }
+  copyText(text)
+    .then(() => uni.showToast({ title: '已复制', icon: 'success', duration: 1200 }))
+    .catch(() => uni.showToast({ title: '复制失败', icon: 'none' }))
 }
 
 function copyOneChain(item) {
