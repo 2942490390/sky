@@ -322,7 +322,7 @@ export function stopNoWingGuardLoop() {
 // 走 addrFn → 需要 setKey 上报到开发者页面
 const _krill = createWriteLoop({
 	addrFn: () => getModuleAddr(0x54BB8F8),
-	setKey: 'krill',                    // ★ 新增
+	setKey: 'krill',                    
 	value: 0,
 	type: 'I32',
 	interval: 100,
@@ -339,7 +339,7 @@ export function stopIgnoreKrillLoop() {
 // ---------- 防举报（I32=257）—— dj() 直接地址 ----------
 const _antiReport = createWriteLoop({
 	addrFn: () => getModuleAddr(0x50453DC),
-	setKey: 'antiReport',               // ★ 新增
+	setKey: 'antiReport',               
 	value: 257,
 	type: 'I32',
 	interval: 100,
@@ -356,7 +356,7 @@ export function stopAntiReportLoop() {
 // ---------- 解锁好友树（I32=256）—— dj() 直接地址 ----------
 const _friendTree = createWriteLoop({
 	addrFn: () => getModuleAddr(0x532F3D0),
-	setKey: 'friendTree',               // ★ 新增
+	setKey: 'friendTree',               
 	value: 256,
 	type: 'I32',
 	interval: 100,

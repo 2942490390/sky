@@ -55,8 +55,7 @@
 				</button>
 				<!-- 打开本地标识管理 -->
 				<button id="localMgrBtn" @click="openLocalModal" @touchstart="preventTouch">📁 本地标识</button>
-				<a id="gotoWeb" href="/static/桶.html" target="_blank" rel="noopener" @touchstart="preventTouch">🧰
-					特征码</a>
+				<a id="gotoWeb" href="/static/桶.html" target="_blank" rel="noopener" class="goto-link">🧰 特征码</a>
 				<button id="near" @click="nearByScan" @touchstart="preventTouch">🔬 邻近扫描</button>
 				<button id="togglePanel" @click="onTogglePanel" @touchstart="preventTouch">{{ paramVisible ? '关闭' : '打开'
 				}}</button>

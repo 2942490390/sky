@@ -297,13 +297,11 @@ uni-toast,
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 16px;
+    padding: 2px;
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 14px;
-    margin-left: 16px;
-    margin-bottom: 8px;
     font-size: 13px;
     color: #1e2a2e;
 }

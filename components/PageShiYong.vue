@@ -430,7 +430,7 @@ async function toggleLockHeight() {
 	if (ok) {
 		lockHeightLabel.value = `锁定中 ${v}`
 		uni.showToast({
-			icon: 'success',
+			icon: 'none',
 			title: `已锁定 ${v}`
 		})
 	} else {

@@ -356,7 +356,7 @@ html.sky-hit-test-repair .glass-inner * {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0px 6px;
+  padding: 0px 8px;
   position: relative;
   left: auto;
   top: auto;

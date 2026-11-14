@@ -75,7 +75,7 @@
       border-radius: 8px;
       color: #c9d1d9;
       font-size: 14px;
-      padding: 10px 16px;
+      padding: 8px 12px;
       cursor: pointer;
       transition: all .15s;
       user-select: none;
@@ -84,6 +84,13 @@
 
     .btn:active {
       transform: scale(.97);
+    }
+
+    .btn.info {
+      background: #3366ff;
+      border-color: #1f6feb;
+      color: #fff;
+      font-weight: 600;
     }
 
     .btn.primary {
@@ -103,7 +110,7 @@
     }
 
     .btn.small {
-      padding: 10px 16px;
+      padding: 8px 12px;
       font-size: 13px;
     }
 
@@ -122,7 +129,7 @@
     }
 
     .seg {
-      padding: 8px 14px;
+      padding: 6px 10px;
       font-size: 13px;
       cursor: pointer;
       color: #8b949e;
@@ -427,7 +434,6 @@
       padding: 8px 12px;
       display: none;
       flex-direction: column;
-      gap: 8px;
     }
 
     .snap-panel.show {
@@ -556,7 +562,7 @@
       }
 
       to {
-        transform: none;
+        transform: translateY(0);
         opacity: 1;
       }
     }
@@ -612,19 +618,6 @@
     .modal-scroll::-webkit-scrollbar-thumb {
       background: #30363d;
       border-radius: 3px;
-    }
-
-    .sig-thead {
-      flex: 0 0 auto;
-      display: flex;
-      background: #161b22;
-      border-bottom: 1px solid #30363d;
-      font-size: 11px;
-      color: #8b949e;
-      font-weight: 600;
-      overflow: hidden;
-      /* 不横滚，靠 JS 同步 */
-      white-space: nowrap;
     }
 
     .sig-row {
@@ -794,7 +787,7 @@
     }
 
     .colcfg-tip {
-      padding: 10px 16px;
+      padding: 8px 12px;
       font-size: 11px;
       color: #6e7681;
       background: #0d1117;
@@ -807,7 +800,7 @@
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      padding: 10px 16px;
+      padding: 8px 12px;
       border-bottom: 1px solid #161b22;
       font-family: "SF Mono", Menlo, Consolas, monospace;
       font-size: 12px;
@@ -877,6 +870,7 @@
     <div class="row">
       <input class="addr-input" id="addrInput" type="text" placeholder="输入十六进制地址，如 0x104000000" autocapitalize="off"
         autocorrect="off" spellcheck="false">
+      <button class="btn info" id="pasteTextBtn">粘贴</button>
       <button class="btn primary" id="scanBtn">读取</button>
       <button class="btn" id="locateBtn" title="跳转到锚点地址">定位</button>
       <button class="btn small" id="copyJsonBtn" title="复制当前数据为JSON">📋 复制JSON</button>
@@ -898,18 +892,6 @@
         <div class="seg" data-step="8" data-dir="fwd">+8</div>
         <div class="seg" data-step="8" data-dir="back">-8</div>
       </div>
-    </div>
-    <div class="row">
-      <button class="btn small" id="saveSnapBtn">💾 保存快照</button>
-      <button class="btn small" id="toggleSnapBtn">🗂 快照列表</button>
-      <button class="btn primary small" id="matchBtn">🔗 匹配特征码</button>
-      <button class="btn warn small" id="clearSnapBtn">🗑 清空</button>
-      <button class="btn small" id="colCfgBtn" title="配置显示哪些列">⚙ 列配置</button>
-      <a class="btn primary small" href="https://env-00jy6kq4uyns-static.normal.cloudstatic.cn/index.html"
-        target="_blank" rel="noopener"
-        style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">🌐 打开网页</a>
-    </div>
-    <div class="row">
       <span class="label">字符串最大字节数</span>
       <div class="seg-group" id="strLenGroup">
         <div class="seg" data-len="32">32</div>
@@ -918,6 +900,16 @@
         <div class="seg" data-len="256">256</div>
       </div>
       <span class="label" style="margin-left:8px;color:#6e7681;font-size:11px;">（自动反推编码，只读可视区并缓存；点击字符串单元格看诊断）</span>
+    </div>
+    <div class="row">
+      <button class="btn small" id="saveSnapBtn">💾 保存快照</button>
+      <button class="btn small" id="toggleSnapBtn">🗂 快照列表</button>
+      <button class="btn primary small" id="matchBtn">🔗 匹配特征码</button>
+      <button class="btn warn small" id="clearSnapBtn">🗑 清空</button>
+      <button class="btn small" id="colCfgBtn" title="配置显示哪些列">⚙ 列配置</button>
+      <a class="btn primary small" href="https://env-00jy72osuzic-static.normal.cloudstatic.cn/index.html"
+        target="_blank" rel="noopener"
+        style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">🌐 打开网页</a>
     </div>
   </div>
 
@@ -959,7 +951,6 @@
         <button class="btn primary" id="modalCloseBtn">关闭</button>
       </div>
       <div class="modal-body">
-        <div class="sig-thead" id="sigThead"></div> <!-- 新增：固定表头 -->
         <div class="modal-scroll" id="modalScroll">
           <div class="sig-empty" id="modalEmpty">
             <div class="icon">🎯</div>
@@ -1027,20 +1018,21 @@
 
       // ★ 列定义：字符串合并为一列 'str'，默认显示
       var COLUMN_DEFS = [
-        {key: 'offset', label: '偏移', className: 'offset', default: true, locked: true, desc: '相对锚点偏移'},
-        {key: 'addr', label: '地址', className: 'addr', default: true, locked: true, desc: '绝对内存地址'},
-        {key: 'hex', label: 'HEX', className: 'hex', default: true, desc: 'U32 十六进制'},
-        {key: 'str', label: '字符串', className: 'str', default: true, desc: '自动反推编码'},
-        {key: 'I8', label: 'I8', className: 'i8', default: true, desc: '8 位有符号整数'},
-        {key: 'I16', label: 'I16', className: 'i16', default: true, desc: '16 位有符号整数'},
-        {key: 'I32', label: 'I32', className: 'i32', default: true, desc: '32 位有符号整数'},
-        {key: 'I64', label: 'I64', className: 'i64', default: true, desc: '64 位有符号整数'},
-        {key: 'F32', label: 'F32', className: 'f32', default: true, desc: '32 位浮点数'},
-        {key: 'F64', label: 'F64', className: 'f64', default: false, desc: '64 位浮点数'}
+        { key: 'offset', label: '偏移', className: 'offset', default: true, locked: true, desc: '相对锚点偏移' },
+        { key: 'addr', label: '地址', className: 'addr', default: true, locked: true, desc: '绝对内存地址' },
+        { key: 'hex', label: 'HEX', className: 'hex', default: true, desc: 'U32 十六进制' },
+        { key: 'str', label: '字符串', className: 'str', default: true, desc: '自动反推编码' },
+        { key: 'I8', label: 'I8', className: 'i8', default: true, desc: '8 位有符号整数' },
+        { key: 'I16', label: 'I16', className: 'i16', default: true, desc: '16 位有符号整数' },
+        { key: 'I32', label: 'I32', className: 'i32', default: true, desc: '32 位有符号整数' },
+        { key: 'I64', label: 'I64', className: 'i64', default: true, desc: '64 位有符号整数' },
+        { key: 'F32', label: 'F32', className: 'f32', default: true, desc: '32 位浮点数' },
+        { key: 'F64', label: 'F64', className: 'f64', default: false, desc: '64 位浮点数' }
       ];
 
       var $addrInput = document.getElementById('addrInput');
       var $scanBtn = document.getElementById('scanBtn');
+      var $pasteTextBtn = document.getElementById('pasteTextBtn');
       var $locateBtn = document.getElementById('locateBtn');
       var $rangeGroup = document.getElementById('rangeGroup');
       var $stepGroup = document.getElementById('stepGroup');
@@ -1067,7 +1059,6 @@
       var $modalEmpty = document.getElementById('modalEmpty');
       var $modalEmptyText = document.getElementById('modalEmptyText');
       var $modalSub = document.getElementById('modalSub');
-      var $sigThead = document.getElementById('sigThead');
       var $colCfgBtn = document.getElementById('colCfgBtn');
       var $colCfgMask = document.getElementById('colCfgMask');
       var $colCfgGrid = document.getElementById('colCfgGrid');
@@ -1092,7 +1083,7 @@
         token: 0,
         lastStart: 0,
         lastEnd: 0,
-        colWidths: {off: 50, addr: 80, hex: 90, str: 240, I8: 40, I16: 50, I32: 80, I64: 130, F32: 60, F64: 130},
+        colWidths: { off: 50, addr: 80, hex: 90, str: 240, I8: 40, I16: 50, I32: 80, I64: 130, F32: 60, F64: 130 },
         rawI64: [],
         snapshots: [],
         selectedSnapIds: new Set(),
@@ -1106,7 +1097,7 @@
 
       (function initWindowLayout() {
         if (typeof setLayoutAction !== 'function') return;
-        setLayoutAction(function (w, h) {if (typeof setWindowRect === 'function') setWindowRect(0, 0, w, h);});
+        setLayoutAction(function (w, h) { if (typeof setWindowRect === 'function') setWindowRect(0, 0, w, h); });
       })();
 
       function parseHexAddr(str) {
@@ -1119,14 +1110,14 @@
         try {
           var n = BigInt(str);
           if (n < 0n) return null;
-          return {num: n, str: '0x' + n.toString(16)};
-        } catch (e) {return null;}
+          return { num: n, str: '0x' + n.toString(16) };
+        } catch (e) { return null; }
       }
 
       function toHex(n) {
         if (typeof n === 'bigint') return '0x' + n.toString(16);
         if (Number.isInteger(n) && !Number.isSafeInteger(n)) {
-          try {return '0x' + BigInt(n).toString(16);} catch (e) { }
+          try { return '0x' + BigInt(n).toString(16); } catch (e) { }
         }
         return '0x' + n.toString(16);
       }
@@ -1158,8 +1149,8 @@
         for (var i = 0; i < len; i++) {
           var addr = toHex(addrNum + BigInt(i));
           var b;
-          try {b = Number(h5gg.getValue(addr, 'U8'));}
-          catch (e) {break;}
+          try { b = Number(h5gg.getValue(addr, 'U8')); }
+          catch (e) { break; }
           if (!isFinite(b)) break;
           out.push(b & 0xFF);
         }
@@ -1173,25 +1164,25 @@
           var b = bytes[i];
           if (b === 0) break;
           var len, cp;
-          if (b < 0x80) {len = 1; cp = b;}
-          else if ((b & 0xE0) === 0xC0) {len = 2; cp = b & 0x1F;}
-          else if ((b & 0xF0) === 0xE0) {len = 3; cp = b & 0x0F;}
-          else if ((b & 0xF8) === 0xF0) {len = 4; cp = b & 0x07;}
-          else return {text: s, valid: false, consumed: i};
-          if (i + len > bytes.length) return {text: s, valid: false, consumed: i};
+          if (b < 0x80) { len = 1; cp = b; }
+          else if ((b & 0xE0) === 0xC0) { len = 2; cp = b & 0x1F; }
+          else if ((b & 0xF0) === 0xE0) { len = 3; cp = b & 0x0F; }
+          else if ((b & 0xF8) === 0xF0) { len = 4; cp = b & 0x07; }
+          else return { text: s, valid: false, consumed: i };
+          if (i + len > bytes.length) return { text: s, valid: false, consumed: i };
           for (var k = 1; k < len; k++) {
             var b2 = bytes[i + k];
-            if ((b2 & 0xC0) !== 0x80) return {text: s, valid: false, consumed: i};
+            if ((b2 & 0xC0) !== 0x80) return { text: s, valid: false, consumed: i };
             cp = (cp << 6) | (b2 & 0x3F);
           }
-          if (len === 2 && cp < 0x80) return {text: s, valid: false, consumed: i};
-          if (len === 3 && cp < 0x800) return {text: s, valid: false, consumed: i};
-          if (len === 4 && cp < 0x10000) return {text: s, valid: false, consumed: i};
-          if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) return {text: s, valid: false, consumed: i};
-          try {s += String.fromCodePoint(cp);} catch (e) {return {text: s, valid: false, consumed: i};}
+          if (len === 2 && cp < 0x80) return { text: s, valid: false, consumed: i };
+          if (len === 3 && cp < 0x800) return { text: s, valid: false, consumed: i };
+          if (len === 4 && cp < 0x10000) return { text: s, valid: false, consumed: i };
+          if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) return { text: s, valid: false, consumed: i };
+          try { s += String.fromCodePoint(cp); } catch (e) { return { text: s, valid: false, consumed: i }; }
           i += len;
         }
-        return {text: s, valid: true, consumed: i};
+        return { text: s, valid: true, consumed: i };
       }
 
       // UTF-16（LE / BE）
@@ -1203,19 +1194,19 @@
           if (u === 0) break;
           i += 2;
           if (u >= 0xD800 && u <= 0xDBFF) {
-            if (pendingHigh >= 0) return {text: s, valid: false, consumed: i};
+            if (pendingHigh >= 0) return { text: s, valid: false, consumed: i };
             pendingHigh = u; continue;
           }
           if (u >= 0xDC00 && u <= 0xDFFF) {
-            if (pendingHigh < 0) return {text: s, valid: false, consumed: i};
+            if (pendingHigh < 0) return { text: s, valid: false, consumed: i };
             s += String.fromCharCode(pendingHigh, u);
             pendingHigh = -1; continue;
           }
-          if (pendingHigh >= 0) return {text: s, valid: false, consumed: i};
+          if (pendingHigh >= 0) return { text: s, valid: false, consumed: i };
           s += String.fromCharCode(u);
         }
-        if (pendingHigh >= 0) return {text: s, valid: false, consumed: i};
-        return {text: s, valid: true, consumed: i};
+        if (pendingHigh >= 0) return { text: s, valid: false, consumed: i };
+        return { text: s, valid: true, consumed: i };
       }
 
       // UTF-32（LE / BE）
@@ -1229,11 +1220,11 @@
           if (cp === 0) break;
           i += 4;
           if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {
-            return {text: s, valid: false, consumed: i};
+            return { text: s, valid: false, consumed: i };
           }
-          try {s += String.fromCodePoint(cp);} catch (e) {return {text: s, valid: false, consumed: i};}
+          try { s += String.fromCodePoint(cp); } catch (e) { return { text: s, valid: false, consumed: i }; }
         }
-        return {text: s, valid: true, consumed: i};
+        return { text: s, valid: true, consumed: i };
       }
 
       function detectBOM(b) {
@@ -1274,11 +1265,11 @@
       function decodeAuto(bytes) {
         var bom = detectBOM(bytes);
         var candidates = [
-          {name: 'UTF-8', fn: function (b) {return tryUTF8(b);}},
-          {name: 'UTF-16LE', fn: function (b) {return tryUTF16(b, true);}},
-          {name: 'UTF-16BE', fn: function (b) {return tryUTF16(b, false);}},
-          {name: 'UTF-32LE', fn: function (b) {return tryUTF32(b, true);}},
-          {name: 'UTF-32BE', fn: function (b) {return tryUTF32(b, false);}}
+          { name: 'UTF-8', fn: function (b) { return tryUTF8(b); } },
+          { name: 'UTF-16LE', fn: function (b) { return tryUTF16(b, true); } },
+          { name: 'UTF-16BE', fn: function (b) { return tryUTF16(b, false); } },
+          { name: 'UTF-32LE', fn: function (b) { return tryUTF32(b, true); } },
+          { name: 'UTF-32BE', fn: function (b) { return tryUTF32(b, false); } }
         ];
         var all = [], best = null;
         for (var i = 0; i < candidates.length; i++) {
@@ -1286,7 +1277,7 @@
           var r = c.fn(bytes);
           var isBom = (bom === c.name);
           var sc = scoreResult(r, bytes.length, isBom);
-          var item = {name: c.name, text: r.text, valid: r.valid, score: sc, bom: isBom, consumed: r.consumed};
+          var item = { name: c.name, text: r.text, valid: r.valid, score: sc, bom: isBom, consumed: r.consumed };
           all.push(item);
           if (!best || sc > best.score) best = item;
         }
@@ -1299,16 +1290,16 @@
       // ★ 单行懒加载字符串（只读可见列需要的）
       function ensureRowString(row) {
         if (!row) return;
-        if (!state.visibleCols.str) {row._strLoaded = true; return;}
+        if (!state.visibleCols.str) { row._strLoaded = true; return; }
         if (row._strLoaded) return;
         var addrNum = row._addrNum;
         if (addrNum == null) {
-          try {addrNum = BigInt(row.addr); row._addrNum = addrNum;}
-          catch (e) {row.strText = ''; row.strEnc = ''; row._strLoaded = true; return;}
+          try { addrNum = BigInt(row.addr); row._addrNum = addrNum; }
+          catch (e) { row.strText = ''; row.strEnc = ''; row._strLoaded = true; return; }
         }
         var bytes = readBytes(addrNum, state.strMaxBytes);
         row._strBytes = bytes;
-        if (!bytes.length) {row.strText = ''; row.strEnc = ''; row._strLoaded = true; return;}
+        if (!bytes.length) { row.strText = ''; row.strEnc = ''; row._strLoaded = true; return; }
         var r = decodeAuto(bytes);
         // 分数太低认为不是字符串
         if (!r.valid || r.score < 10 || !r.text) {
@@ -1373,8 +1364,8 @@
           for (var d2 = start; d2 >= -range; d2 -= step) offsets.push(d2);
         }
         var seen = Object.create(null);
-        offsets = offsets.filter(function (d) {if (seen[d]) return false; seen[d] = true; return true;});
-        offsets.sort(function (a, b) {return a - b;});
+        offsets = offsets.filter(function (d) { if (seen[d]) return false; seen[d] = true; return true; });
+        offsets.sort(function (a, b) { return a - b; });
         return offsets;
       }
 
@@ -1386,9 +1377,9 @@
           var v;
           try {
             v = h5gg.getValue(addrStr, TYPE_LIST[i]);
-            if (TYPE_LIST[i] === 'I64') {rawI64Val = (typeof v === 'string') ? v : String(v); v = Number(v);}
+            if (TYPE_LIST[i] === 'I64') { rawI64Val = (typeof v === 'string') ? v : String(v); v = Number(v); }
             else v = Number(v);
-          } catch (e) {v = NaN; if (TYPE_LIST[i] === 'I64') rawI64Val = 'NaN';}
+          } catch (e) { v = NaN; if (TYPE_LIST[i] === 'I64') rawI64Val = 'NaN'; }
           vals.push(v);
         }
         var hexVal = readHexAt(addrStr);
@@ -1399,10 +1390,80 @@
         };
       }
 
+      // ============================================================
+      // 粘贴地址：惰性函数（首次点击才初始化实际实现）
+      // 优先 Clipboard API → 失败回退 execCommand → 再失败提示手动粘贴
+      // ============================================================
+      var pasteImpl = null;   // 真正的实现，首次点击时才创建并缓存
+
+      function pasteTextBtn() {
+        if (!pasteImpl) {
+          pasteImpl = (function () {
+            function applyText(text) {
+              var trimmed = String(text || '').trim();
+              if (!trimmed) {
+                setStatus('剪贴板为空', 'err');
+                return false;
+              }
+              if (/^0x[0-9a-fA-F]+$/.test(trimmed) || /^[0-9a-fA-F]+$/.test(trimmed)) {
+                $addrInput.value = /^0x/i.test(trimmed) ? trimmed : '0x' + trimmed;
+                setStatus('已粘贴地址: ' + $addrInput.value, 'ok');
+                return true;
+              }
+              setStatus('剪贴板内容不是有效的十六进制地址', 'err');
+              return false;
+            }
+
+            // 传统 textarea + execCommand('paste')，移动端 WebView 大概率失败
+            function fallbackPaste() {
+              var ta = document.createElement('textarea');
+              ta.style.position = 'fixed';
+              ta.style.opacity = '0';
+              ta.style.left = '-9999px';
+              document.body.appendChild(ta);
+              ta.focus();
+              ta.select();
+              var ok = false;
+              try {
+                ok = document.execCommand('paste');
+                if (ok) applyText(ta.value);
+              } catch (e) {
+                ok = false;
+              }
+              document.body.removeChild(ta);
+
+              if (!ok) {
+                // 最终兜底：聚焦输入框，让用户手动长按粘贴
+                $addrInput.focus();
+                $addrInput.select();
+                setStatus('当前环境禁止脚本读剪贴板，请长按输入框手动粘贴', 'err');
+              }
+            }
+
+            // 返回实际执行函数
+            return function doPaste() {
+              // 现代 Clipboard API（需安全上下文 + 用户手势）
+              if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+                navigator.clipboard.readText().then(function (text) {
+                  applyText(text);
+                }).catch(function () {
+                  // 常见于 http / 非安全上下文 / WebView 无权限
+                  fallbackPaste();
+                });
+              } else {
+                fallbackPaste();
+              }
+            };
+          })();
+        }
+        // ★ 关键：首次创建后立即执行，后续每次点击也都会转发执行
+        return pasteImpl.apply(this, arguments);
+      }
+
       function startScan() {
         var parsed = parseHexAddr($addrInput.value);
-        if (!parsed) {setStatus('地址格式错误，请输入如 0x104000000', 'err'); return;}
-        if (!isH5GG()) {setStatus('未检测到 h5gg 环境，无法读取内存', 'err'); return;}
+        if (!parsed) { setStatus('地址格式错误，请输入如 0x104000000', 'err'); return; }
+        if (!isH5GG()) { setStatus('未检测到 h5gg 环境，无法读取内存', 'err'); return; }
         state.token++;
         var myToken = state.token;
         state.baseAddr = parsed.str;
@@ -1434,7 +1495,7 @@
           if (idx < total) setTimeout(step, 0);
           else finishScan(myToken);
         }
-        requestAnimationFrame(function () {setTimeout(step, 0);});
+        requestAnimationFrame(function () { setTimeout(step, 0); });
       }
 
       function finishScan(myToken) {
@@ -1442,7 +1503,7 @@
         state.loading = false;
         $scanBtn.disabled = false;
         $progressFill.style.width = '100%';
-        setTimeout(function () {$progressFill.style.width = '0%';}, 400);
+        setTimeout(function () { $progressFill.style.width = '0%'; }, 400);
         setStatus('读取完成 · 基准 ' + state.baseAddr, 'ok');
         computeColumnWidths();
         renderVisible(true);
@@ -1452,7 +1513,7 @@
       function computeColumnWidths() {
         var rows = state.rows;
         if (!rows.length) return;
-        var maxChars = {offset: 6, addr: 12, hex: 10, I8: 6, I16: 8, I32: 12, I64: 22, F32: 14, F64: 22};
+        var maxChars = { offset: 6, addr: 12, hex: 10, I8: 6, I16: 8, I32: 12, I64: 22, F32: 14, F64: 22 };
         var sampleSize = Math.min(rows.length, 300);
         for (var i = 0; i < sampleSize; i++) {
           var row = rows[i]; if (!row) continue;
@@ -1466,12 +1527,12 @@
           }
         }
         var charWidth = 7.2, padding = 16;
-        var minWidths = {offset: 40, addr: 80, hex: 88, I8: 40, I16: 46, I32: 60, I64: 100, F32: 70, F64: 100};
+        var minWidths = { offset: 40, addr: 80, hex: 88, I8: 40, I16: 46, I32: 60, I64: 100, F32: 70, F64: 100 };
         var widths = {};
         widths.off = Math.max(minWidths.offset, maxChars.offset * charWidth + padding);
         widths.addr = Math.max(minWidths.addr, maxChars.addr * charWidth + padding);
         widths.hex = Math.max(minWidths.hex, maxChars.hex * charWidth + padding);
-        TYPE_LIST.forEach(function (t) {widths[t] = Math.max(minWidths[t], maxChars[t] * charWidth + padding);});
+        TYPE_LIST.forEach(function (t) { widths[t] = Math.max(minWidths[t], maxChars[t] * charWidth + padding); });
         widths.str = 240;
         state.colWidths = widths;
         updateHeadWidths();
@@ -1491,7 +1552,7 @@
           else if (col.key === 'hex') width = w.hex;
           else if (col.key === 'str') width = w.str;
           else width = w[col.key];
-          if (width != null) {el.style.minWidth = width + 'px'; el.style.width = width + 'px';}
+          if (width != null) { el.style.minWidth = width + 'px'; el.style.width = width + 'px'; }
           idx++;
         });
       }
@@ -1563,7 +1624,7 @@
         if (isNaN(off)) return;
         var row = null;
         for (var i = 0; i < state.rows.length; i++) {
-          if (state.rows[i] && state.rows[i].offset === off) {row = state.rows[i]; break;}
+          if (state.rows[i] && state.rows[i].offset === off) { row = state.rows[i]; break; }
         }
         if (!row) return;
         if (!row._strDecoded || !row._strBytes) {
@@ -1582,7 +1643,7 @@
           dec = r;
         }
         $diagSub.textContent = '地址 ' + row.addr + ' · 读取 ' + bytes.length + ' 字节';
-        var hexStr = bytes.slice(0, 32).map(function (b) {return b.toString(16).padStart(2, '0');}).join(' ');
+        var hexStr = bytes.slice(0, 32).map(function (b) { return b.toString(16).padStart(2, '0'); }).join(' ');
         if (bytes.length > 32) hexStr += ' …';
         $diagMeta.innerHTML =
           '原始字节（前 32）：<br><code>' + escapeHtml(hexStr || '(空)') + '</code><br>' +
@@ -1592,7 +1653,7 @@
         var html = '';
         var all = dec.all || [];
         // 按分数降序
-        var sorted = all.slice().sort(function (a, b) {return b.score - a.score;});
+        var sorted = all.slice().sort(function (a, b) { return b.score - a.score; });
         for (var i = 0; i < sorted.length; i++) {
           var it = sorted[i];
           var isBest = (it === dec.all[0] || it.name === dec.enc);
@@ -1611,39 +1672,39 @@
         $diagMask.classList.add('show');
       }
 
-      function closeDiag() {$diagMask.classList.remove('show');}
+      function closeDiag() { $diagMask.classList.remove('show'); }
 
       var scrollTicking = false;
       $scroller.addEventListener('scroll', function () {
         if (scrollTicking) return;
         scrollTicking = true;
-        requestAnimationFrame(function () {scrollTicking = false; if (!state.loading) renderVisible(false);});
-      }, {passive: true});
+        requestAnimationFrame(function () { scrollTicking = false; if (!state.loading) renderVisible(false); });
+      }, { passive: true });
 
       var resizeTimer = null;
       window.addEventListener('resize', function () {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function () {
-          if (!state.loading && state.rows.length) {computeColumnWidths(); renderVisible(true);}
+          if (!state.loading && state.rows.length) { computeColumnWidths(); renderVisible(true); }
         }, 150);
       });
 
-      function setStatus(text, cls) {$statusText.textContent = text; $statusText.className = cls || '';}
+      function setStatus(text, cls) { $statusText.textContent = text; $statusText.className = cls || ''; }
 
       function locateAnchor() {
-        if (!state.rows.length) {setStatus('请先读取内存数据', 'err'); return;}
+        if (!state.rows.length) { setStatus('请先读取内存数据', 'err'); return; }
         var anchorIndex = 0;
         for (var i = 0; i < state.rows.length; i++) {
-          if (state.rows[i] && state.rows[i].offset === 0) {anchorIndex = i; break;}
+          if (state.rows[i] && state.rows[i].offset === 0) { anchorIndex = i; break; }
         }
         var targetTop = anchorIndex * ROW_HEIGHT - ($scroller.clientHeight / 2) + ROW_HEIGHT / 2;
         targetTop = Math.max(0, Math.min(targetTop, $phantom.offsetHeight - $scroller.clientHeight));
         $scroller.scrollTop = targetTop;
-        setTimeout(function () {renderVisible(true);}, 30);
+        setTimeout(function () { renderVisible(true); }, 30);
       }
 
       function copyJSON() {
-        if (!state.rows.length) {setStatus('没有可复制的数据，请先读取', 'err'); return;}
+        if (!state.rows.length) { setStatus('没有可复制的数据，请先读取', 'err'); return; }
         var output = {
           baseAddress: state.baseAddr, range: state.range, step: state.step,
           direction: state.dir, strMaxBytes: state.strMaxBytes,
@@ -1669,7 +1730,7 @@
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(jsonStr).then(function () {
             setStatus('JSON 已复制到剪贴板 (' + output.rows.length + ' 行)', 'ok');
-          }).catch(function () {fallbackCopy(jsonStr);});
+          }).catch(function () { fallbackCopy(jsonStr); });
         } else fallbackCopy(jsonStr);
       }
 
@@ -1681,25 +1742,25 @@
           if (document.execCommand('copy')) setStatus('JSON 已复制 (兼容模式)', 'ok');
           else setStatus('复制失败，请手动选择', 'err');
           document.body.removeChild(ta);
-        } catch (e) {setStatus('复制失败: ' + e.message, 'err');}
+        } catch (e) { setStatus('复制失败: ' + e.message, 'err'); }
       }
 
       // ==================== 列配置 ====================
       function getVisibleColKeys() {
         var arr = [];
-        COLUMN_DEFS.forEach(function (c) {if (state.visibleCols[c.key]) arr.push(c.key);});
+        COLUMN_DEFS.forEach(function (c) { if (state.visibleCols[c.key]) arr.push(c.key); });
         return arr;
       }
 
       function defaultVisibleCols() {
         var v = {};
-        COLUMN_DEFS.forEach(function (c) {v[c.key] = c.default;});
+        COLUMN_DEFS.forEach(function (c) { v[c.key] = c.default; });
         return v;
       }
 
       function loadColCfg() {
         var stored = null;
-        try {stored = JSON.parse(localStorage.getItem(COL_CFG_KEY) || 'null');} catch (e) { }
+        try { stored = JSON.parse(localStorage.getItem(COL_CFG_KEY) || 'null'); } catch (e) { }
         state.visibleCols = defaultVisibleCols();
         if (stored && typeof stored === 'object') {
           COLUMN_DEFS.forEach(function (c) {
@@ -1710,7 +1771,7 @@
       }
 
       function saveColCfg() {
-        try {localStorage.setItem(COL_CFG_KEY, JSON.stringify(state.visibleCols));} catch (e) { }
+        try { localStorage.setItem(COL_CFG_KEY, JSON.stringify(state.visibleCols)); } catch (e) { }
       }
 
       function applyColCfgChange() {
@@ -1759,7 +1820,7 @@
         renderColCfgPanel();
         $colCfgMask.classList.add('show');
       }
-      function closeColCfg() {$colCfgMask.classList.remove('show');}
+      function closeColCfg() { $colCfgMask.classList.remove('show'); }
 
       function setAllVisible(val) {
         COLUMN_DEFS.forEach(function (c) {
@@ -1786,14 +1847,14 @@
       }
 
       function loadSnapshots() {
-        try {state.snapshots = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');}
-        catch (e) {state.snapshots = [];}
+        try { state.snapshots = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); }
+        catch (e) { state.snapshots = []; }
         if (!Array.isArray(state.snapshots)) state.snapshots = [];
         renderSnapPanel();
       }
       function saveSnapshots() {
-        try {localStorage.setItem(STORE_KEY, JSON.stringify(state.snapshots));}
-        catch (e) {setStatus('保存失败：存储已满或不可用', 'err');}
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(state.snapshots)); }
+        catch (e) { setStatus('保存失败：存储已满或不可用', 'err'); }
       }
 
       function currentDataToSnapshot() {
@@ -1804,7 +1865,7 @@
             vals[t] = (t === 'I64' && row.rawI64 != null) ? row.rawI64
               : ((typeof row.vals[j] === 'number' && isFinite(row.vals[j])) ? row.vals[j] : null);
           });
-          return {offset: row.offset, addr: row.addr, hex: row.hex || null, vals: vals, rawI64: row.rawI64 || null};
+          return { offset: row.offset, addr: row.addr, hex: row.hex || null, vals: vals, rawI64: row.rawI64 || null };
         });
         return {
           id: genSnapshotId(),
@@ -1821,7 +1882,7 @@
       }
 
       function doSaveSnapshot() {
-        if (!state.rows.length) {setStatus('没有数据可保存，请先读取', 'err'); return;}
+        if (!state.rows.length) { setStatus('没有数据可保存，请先读取', 'err'); return; }
         state.snapshots.push(currentDataToSnapshot());
         saveSnapshots();
         renderSnapPanel();
@@ -1836,11 +1897,11 @@
         renderSnapPanel();
         setStatus('快照已全部清空', 'ok');
       }
-      function toggleSnapPanel() {$snapPanel.classList.toggle('show');}
+      function toggleSnapPanel() { $snapPanel.classList.toggle('show'); }
 
       function escapeHtml(s) {
         return String(s).replace(/[&<>"']/g, function (c) {
-          return ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c];
+          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
         });
       }
 
@@ -1851,7 +1912,7 @@
           var chip = document.createElement('div');
           chip.className = 'snap-chip' + (state.selectedSnapIds.has(snap.id) ? ' selected' : '');
           var date = new Date(snap.timestamp);
-          var timeStr = date.toLocaleString('zh-CN', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'});
+          var timeStr = date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
           chip.innerHTML =
             '<span class="check"></span>' +
             '<span class="anchor-badge">📌' + escapeHtml(snap.baseAddress) + '</span>' +
@@ -1866,7 +1927,7 @@
           });
           chip.querySelector('[data-del]').addEventListener('click', function (e) {
             e.stopPropagation();
-            state.snapshots = state.snapshots.filter(function (s) {return s.id !== snap.id;});
+            state.snapshots = state.snapshots.filter(function (s) { return s.id !== snap.id; });
             state.selectedSnapIds.delete(snap.id);
             saveSnapshots();
             renderSnapPanel();
@@ -1879,7 +1940,7 @@
       // 核心匹配逻辑（保持原样，字符串列不参与）
       // ============================================================
       function doMatch() {
-        var sel = state.snapshots.filter(function (s) {return state.selectedSnapIds.has(s.id);});
+        var sel = state.snapshots.filter(function (s) { return state.selectedSnapIds.has(s.id); });
         if (sel.length < 2) {
           openModal();
           showModalEmpty('请至少勾选 2 个快照进行对比匹配');
@@ -1894,7 +1955,7 @@
           });
         });
 
-        var offsetList = Object.keys(allOffsets).map(Number).sort(function (a, b) {return a - b;});
+        var offsetList = Object.keys(allOffsets).map(Number).sort(function (a, b) { return a - b; });
         var results = [];
 
         for (var oi = 0; oi < offsetList.length; oi++) {
@@ -1902,7 +1963,7 @@
           for (var ti = 0; ti < TYPE_LIST.length; ti++) {
             var type = TYPE_LIST[ti];
             var refSnap = sel[0];
-            var refRow = refSnap.rows.find(function (r) {return r.offset === offset;});
+            var refRow = refSnap.rows.find(function (r) { return r.offset === offset; });
             if (!refRow) continue;
             var refVal = refRow.vals[type];
             if (refVal === null || refVal === undefined) continue;
@@ -1914,7 +1975,7 @@
 
             for (var si = 1; si < sel.length; si++) {
               var snap = sel[si];
-              var row = snap.rows.find(function (r) {return r.offset === offset;});
+              var row = snap.rows.find(function (r) { return r.offset === offset; });
               if (!row) continue;
               var cmpVal = row.vals[type];
               if (cmpVal === null || cmpVal === undefined) continue;
@@ -1964,7 +2025,7 @@
           if (num === 0) return true;
         }
         if (type === 'I64') {
-          try {var n = BigInt(key.replace(/^I64:/, '')); if (n === 0n) return true;} catch (e) { }
+          try { var n = BigInt(key.replace(/^I64:/, '')); if (n === 0n) return true; } catch (e) { }
         }
         if (type === 'F32' || type === 'F64') {
           var hex = key.split(':')[1] || '';
@@ -1983,23 +2044,20 @@
         return 4;
       }
 
-      function openModal() {$modalMask.classList.add('show');}
-      function closeModal() {$modalMask.classList.remove('show');}
+      function openModal() { $modalMask.classList.add('show'); }
+      function closeModal() { $modalMask.classList.remove('show'); }
 
       function showModalEmpty(msg) {
         $modalEmptyText.textContent = msg;
         $modalEmpty.style.display = 'flex';
         $modalScroll.innerHTML = '';
         $modalScroll.appendChild($modalEmpty);
-        $sigThead.innerHTML = '';   // ← 加这行，空状态不显示表头
         $modalSub.textContent = '从各快照各自锚点出发，匹配次数越多、离锚点越近越靠前';
       }
 
       function renderModal(results, sel) {
         $modalEmpty.style.display = 'none';
-
-        // ---- 表头：放到滚动区外面的固定层 ----
-        $sigThead.innerHTML =
+        var html = '<div style="display:flex;background:#161b22;border-bottom:1px solid #30363d;font-size:11px;color:#8b949e;font-weight:600;position:sticky;top:0;z-index:5;">' +
           '<div class="th" style="min-width:40px;width:40px">序</div>' +
           '<div class="th" style="min-width:50px;width:50px">匹配</div>' +
           '<div class="th" style="min-width:52px;width:52px">类型</div>' +
@@ -2007,10 +2065,9 @@
           '<div class="th addr" style="min-width:160px;width:160px">内存地址</div>' +
           '<div class="th offset" style="min-width:60px;width:60px">偏移</div>' +
           '<div class="th" style="min-width:200px;width:200px">特征值</div>' +
-          '<div class="th" style="min-width:80px;width:80px">匹配快照</div>';
+          '<div class="th" style="min-width:80px;width:80px">匹配快照</div>' +
+          '</div>';
 
-        // ---- 数据行 ----
-        var html = '';
         for (var i = 0; i < results.length; i++) {
           var r = results[i];
           var isAnchor = (r.offset === 0);
@@ -2032,20 +2089,12 @@
         }
 
         $modalScroll.innerHTML = html;
-        $modalScroll.scrollTop = 0;      // 新结果回到顶部
         $modalSub.textContent = '共 ' + results.length + ' 个特征码 · 匹配次数降序 · 偏移升序 · 从各快照锚点出发';
-        syncSigTheadScroll();
       }
-
-      function syncSigTheadScroll() {
-        // 让表头内部横向偏移跟数据区一致
-        $sigThead.scrollLeft = $modalScroll.scrollLeft;
-      }
-      $modalScroll.addEventListener('scroll', syncSigTheadScroll, {passive: true});
 
       function formatDisplayValue(type, val, rawI64, key) {
         if (type === 'I64' && rawI64 != null) {
-          try {return BigInt(rawI64).toString();} catch (e) {return rawI64;}
+          try { return BigInt(rawI64).toString(); } catch (e) { return rawI64; }
         }
         if (type === 'F32' || type === 'F64') {
           if (typeof val === 'number' && isFinite(val)) return fmtNum(val);
@@ -2056,9 +2105,10 @@
       }
 
       // ==================== 事件绑定 ====================
+      $pasteTextBtn.addEventListener('click', pasteTextBtn);
       $scanBtn.addEventListener('click', startScan);
       $addrInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {e.preventDefault(); $addrInput.blur(); startScan();}
+        if (e.key === 'Enter') { e.preventDefault(); $addrInput.blur(); startScan(); }
       });
       $locateBtn.addEventListener('click', locateAnchor);
       $copyJsonBtn.addEventListener('click', copyJSON);
@@ -2069,27 +2119,27 @@
       $clearSnapBtn.addEventListener('click', doClearSnapshots);
 
       $modalCloseBtn.addEventListener('click', closeModal);
-      $modalMask.addEventListener('click', function (e) {if (e.target === $modalMask) closeModal();});
+      $modalMask.addEventListener('click', function (e) { if (e.target === $modalMask) closeModal(); });
 
       $colCfgBtn.addEventListener('click', openColCfg);
       $colCfgCloseBtn.addEventListener('click', closeColCfg);
-      $colCfgMask.addEventListener('click', function (e) {if (e.target === $colCfgMask) closeColCfg();});
-      $colCfgAllBtn.addEventListener('click', function () {setAllVisible(true);});
-      $colCfgNoneBtn.addEventListener('click', function () {setAllVisible(false);});
+      $colCfgMask.addEventListener('click', function (e) { if (e.target === $colCfgMask) closeColCfg(); });
+      $colCfgAllBtn.addEventListener('click', function () { setAllVisible(true); });
+      $colCfgNoneBtn.addEventListener('click', function () { setAllVisible(false); });
       $colCfgDefaultBtn.addEventListener('click', resetDefaultVisible);
 
       $diagCloseBtn.addEventListener('click', closeDiag);
-      $diagMask.addEventListener('click', function (e) {if (e.target === $diagMask) closeDiag();});
+      $diagMask.addEventListener('click', function (e) { if (e.target === $diagMask) closeDiag(); });
 
       $rangeGroup.addEventListener('click', function (e) {
         var seg = e.target.closest('.seg'); if (!seg) return;
-        Array.prototype.forEach.call($rangeGroup.children, function (c) {c.classList.toggle('active', c === seg);});
+        Array.prototype.forEach.call($rangeGroup.children, function (c) { c.classList.toggle('active', c === seg); });
         state.range = parseInt(seg.dataset.range, 10);
         if (state.baseAddr) startScan();
       });
       $stepGroup.addEventListener('click', function (e) {
         var seg = e.target.closest('.seg'); if (!seg) return;
-        Array.prototype.forEach.call($stepGroup.children, function (c) {c.classList.toggle('active', c === seg);});
+        Array.prototype.forEach.call($stepGroup.children, function (c) { c.classList.toggle('active', c === seg); });
         state.step = parseInt(seg.dataset.step, 10);
         state.dir = seg.dataset.dir;
         if (state.baseAddr) startScan();
@@ -2097,7 +2147,7 @@
 
       $strLenGroup.addEventListener('click', function (e) {
         var seg = e.target.closest('.seg'); if (!seg) return;
-        Array.prototype.forEach.call($strLenGroup.children, function (c) {c.classList.toggle('active', c === seg);});
+        Array.prototype.forEach.call($strLenGroup.children, function (c) { c.classList.toggle('active', c === seg); });
         state.strMaxBytes = parseInt(seg.dataset.len, 10);
         for (var i = 0; i < state.rows.length; i++) {
           var row = state.rows[i];

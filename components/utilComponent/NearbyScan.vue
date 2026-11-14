@@ -26,7 +26,7 @@
                 </view>
                 <view class="near-row">
                     <text class="near-label">指数</text>
-                    <input class="near-input" v-model="inShift" placeholder="20（默认2^20，最大2^24）" spellcheck="false" />
+                    <input class="near-input" v-model="inShift" placeholder="20（默认2^20，最大2^32）" spellcheck="false" />
                 </view>
                 <view class="near-row">
                     <text class="near-label">类型</text>
@@ -114,7 +114,7 @@ import { computed, onMounted, ref, shallowRef, triggerRef } from 'vue'
 /* ========== 常量 ========== */
 const TYPE_SIZE = { I8: 1, I16: 2, I32: 4, I64: 8, F32: 4, F64: 8 }
 const ALL_TYPES = ['I8', 'I16', 'I32', 'I64', 'F32', 'F64']
-const MAX_SHIFT = 24
+const MAX_SHIFT = 32
 const MAX_RENDER = 5000
 const PERM_TEXT = { rw: '可读可写', ro: '只读', na: '不可访问' }
 

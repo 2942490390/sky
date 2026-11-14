@@ -99,7 +99,7 @@ async function ensureAnyDoor() {
 		anyDoorReady.value = false
 	}
 	if (!anyDoorReady.value) {
-		setStatus('❌ 任意门初始化失败（特征码未定位到）', 'fail')
+		setStatus('❌ 任意门初始化失败：当前地图暂未配置特征码', 'fail')
 	}
 	return anyDoorReady.value
 }
@@ -129,8 +129,8 @@ async function warp(spot) {
 
 	try {
 		if (!await ensureAnyDoor()) {
-			setStatus('❌ 任意门不可用', 'fail')
-			uni.showToast({ icon: 'none', title: '任意门不可用' })
+			setStatus('❌ 任意门不可用（首次需在遇境初始化）', 'fail')
+			uni.showToast({ icon: 'none', title: '请先回遇境初始化' })
 			return
 		}
 
@@ -142,20 +142,18 @@ async function warp(spot) {
 			return
 		}
 
-		// 写入了，根据写后读回提示
 		if (r.writtenCode !== spot.anyDoorCode) {
 			setStatus(`⚠️ 写入后读回="${r.writtenCode}"（可能游戏在处理），等待切图中…`, 'info')
 		} else {
 			setStatus(`已写入 ${spot.anyDoorCode}，等待游戏切图…`, 'info')
 		}
 
-		// 严格验证：只有读到目标 code 才算成功
 		const verified = await waitAnyDoorVerify(spot.anyDoorCode, 6000)
 		if (verified) {
 			setStatus(`✅ 任意门传送成功：${spot.name}`, 'ok')
-			uni.showToast({ icon: 'success', title: '传送成功' })
+			uni.showToast({ icon: 'none', title: '✅ 任意门传送成功' })
 		} else {
-			setStatus(`❌ 写入成功但游戏未切到目标关卡（标志/偏移可能不匹配当前版本）`, 'fail')
+			setStatus(`❌ 写入成功但游戏未切到目标关卡`, 'fail')
 			uni.showToast({ icon: 'none', title: '未生效' })
 		}
 	} catch (e) {

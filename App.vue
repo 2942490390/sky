@@ -46,8 +46,8 @@ let focusOutTimer = null
 let vvTimer = null
 let reloadTimer = null
 let stopInteractionWatchdog = null
-let stopGestureBlocker = null // ★ 新增
-let stopTapOnly = null // ★ 新增
+let stopGestureBlocker = null 
+let stopTapOnly = null 
 
 // ★ 4. 滚动锁定标志
 let isScrollLocked = false

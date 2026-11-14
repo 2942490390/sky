@@ -124,7 +124,7 @@ export function installTapOnly(options = {}) {
 	document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true })
 	document.addEventListener('touchend', onTouchEnd, { passive: false, capture: true }) // ★ 改 false
 	document.addEventListener('touchcancel', onTouchCancel, { passive: true, capture: true })
-	document.addEventListener('click', onClickCapture, true) // ★ 新增
+	document.addEventListener('click', onClickCapture, true) 
 
 	return () => {
 		document.removeEventListener('touchstart', onTouchStart, true)

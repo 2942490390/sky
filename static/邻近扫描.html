@@ -434,7 +434,7 @@
                 </div>
                 <div class="row">
                     <label>指数</label>
-                    <input id="inShift" placeholder="20（默认2^20，最大2^24）" value="20" spellcheck="false">
+                    <input id="inShift" placeholder="20（默认2^20，最大2^32）" value="20" spellcheck="false">
                 </div>
                 <div class="row">
                     <label>类型</label>
@@ -503,7 +503,7 @@
         /* ========== 常量 ========== */
         const TYPE_SIZE = { I8: 1, I16: 2, I32: 4, I64: 8, F32: 4, F64: 8 };
         const ALL_TYPES = ['I8', 'I16', 'I32', 'I64', 'F32', 'F64'];
-        const MAX_SHIFT = 24, MAX_RENDER = 5000;
+        const MAX_SHIFT = 32, MAX_RENDER = 5000;
         let CUR_TYPE = 'I32', CENTER_ADDR = 0n;
 
         /* ========== 工具 ========== */
