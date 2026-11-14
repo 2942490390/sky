@@ -1,4 +1,4 @@
-import { createVNode, render } from 'vue'
+import {createVNode, render} from 'vue'
 import PromptDialog from '@/components/PromptDialog.vue'
 
 function createDialog(options) {
@@ -37,13 +37,13 @@ function createDialog(options) {
 }
 
 export function usePrompt(options = {}) {
-    return createDialog({ type: 'prompt', immediateFocus: true, ...options })
+    return createDialog({type: 'prompt', immediateFocus: true, ...options})
 }
 
 export function useConfirm(options = {}) {
-    return createDialog({ type: 'confirm', ...options })
+    return createDialog({type: 'confirm', ...options})
 }
 
 export function useAlert(options = {}) {
-    return createDialog({ type: 'alert', ...options })
+    return createDialog({type: 'alert', ...options})
 }

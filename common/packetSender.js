@@ -5,8 +5,9 @@
 // import { getPtr, addrjump, getModuleAddr } from './h5gg.js'
 import {
 	showToast
-} from '../utils/toast.js'
+} from '@/utils/toast.js'
 
+import { setAddr } from './addressRegistry.js'
 
 
 // ============================================================
@@ -83,7 +84,7 @@ function safeWrite(addr, value, type) {
 function toast(msg) {
 	try {
 		showToast(String(msg), 2000)
-	} catch (e) {}
+	} catch (e) { }
 }
 
 function sleep(ms) {
@@ -137,6 +138,7 @@ async function resolveSubmitAddr() {
 		const _b = Number(h5gg.getValue(_a + 0x60, 'I64'))
 		if (!_b) return 0
 		_submitCache = _b + 0x2005E8
+		setAddr('submitAddr', _submitCache, { type: 'BASE' })
 		return _submitCache
 	} catch (e) {
 		return 0
@@ -194,7 +196,7 @@ async function submitPacket(addr, timeoutMs) {
 			try {
 				h5gg.setValue('0x' + submit.toString(16), 2, 'I32')
 				h5gg.setValue('0x' + (submit + 4).toString(16), 31, 'I32')
-			} catch (e) {}
+			} catch (e) { }
 			return false
 		}
 
@@ -379,14 +381,14 @@ function doFinish() {
 			h5gg.setValue('0x' + _submitCache.toString(16), 2, 'I32')
 			h5gg.setValue('0x' + (_submitCache + 4).toString(16), 31, 'I32')
 		}
-	} catch (e) {}
+	} catch (e) { }
 
 	if (wasStop) {
 		toast('已停止: ' + name)
 	} else if (typeof onDone === 'function') {
 		try {
 			onDone(ok, fail, total)
-		} catch (e) {}
+		} catch (e) { }
 	}
 }
 
@@ -461,7 +463,9 @@ function getShrineAddr() {
 		if (!P1) return 0
 		const v = Number(h5gg.getValue(P1 + 0x10, 'I64'))
 		if (!v) return 0
-		return v + 0xD0
+		const a = v + 0xD0
+		setAddr('shrineAddr', a, { type: 'BASE' })
+		return a
 	} catch (e) {
 		return 0
 	}
@@ -476,6 +480,7 @@ function getXZDZAddr() {
 		if (!P1) return 0
 		const v = Number(h5gg.getValue(P1 + 0x80, 'I64'))
 		if (!v) return 0
+		setAddr('xzdzAddr', v, { type: 'BASE' })
 		return v
 	} catch (e) {
 		return 0

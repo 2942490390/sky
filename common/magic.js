@@ -1,4 +1,5 @@
 // common/magic.js
+import { setAddr } from './addressRegistry.js'
 // 特征魔法核心逻辑（移植自魔法.html）
 import { writeSafe } from './h5gg.js'
 import { MAGIC_ITEMS_Length } from './magicData_all.js'
@@ -166,6 +167,13 @@ export function initMagic() {
 						&& Number(h5gg.getValue('0x' + resAddr4.toString(16), 'I64')) === 1318554959873
 					) {
 						magicCountAddr = verifyAddr
+						setAddr('magicCount', magicCountAddr, { type: 'I32' })
+						for (let i = 1; i <= SLOT_COUNT; i++) {
+							const m = Magic[i]
+							setAddr('magicId' + i, m.id, { type: 'I32', note: 'sw - 0x28' })
+							setAddr('magicTime' + i, m.time, { type: 'I32', note: 'sw - 0x14' })
+							setAddr('magicSwitch' + i, m.switchAddr, { type: 'I32', note: 'sw' })
+						}
 						// console.log('卡槽数量地址：', '0x' + magicCountAddr.toString(16))
 						break
 					}

@@ -1,114 +1,122 @@
 <template>
-	<view class="page">
-		<!-- 顶部操作栏 -->
-		<view class="toolbar">
-			<text class="title">指针链配置</text>
-			<view class="tools">
-				<view class="mini-btn add" @click="addRow">+ 新增</view>
-				<view class="mini-btn reset" @click="onReset">恢复默认</view>
-				<view class="mini-btn copy" @click="onCopy">复制JS</view>
-				<view class="mini-btn import" @click="openImport">导入指针</view>
+	<view class="page-wrapper">
+		<!-- 监控面板：覆盖在设置页上层 -->
+		<PageDevMonitor v-if="showMonitor" @close="showMonitor = false" />
+		<view class="page">
+			<!-- 顶部操作栏 -->
+			<view class="toolbar">
+				<text class="title">指针链配置</text>
+				<view class="tools">
+					<view class="mini-btn add" @click="addRow">新增</view>
+					<view class="mini-btn reset" @click="onReset">重置</view>
+					<view class="mini-btn copy" @click="onCopy">复制</view>
+					<view class="mini-btn import" @click="openImport">导入</view>
+					<view class="mini-btn dev" @click="openDev">开发者</view>
+				</view>
 			</view>
-		</view>
 
-		<!-- 配置列表 -->
-		<scroll-view class="list" scroll-y :scroll-top="scrollTop" :scroll-with-animation="true" @scroll="onScroll"
-			:style="{ height: listHeight + 'px' }">
-			<view ref="listContentRef" class="list-content">
-				<view v-for="(item, idx) in list" :key="item.id" class="card"
-					:class="{ 'card-active': idx === highlightIndex }">
-					<!-- 第一行：功能 key 选择 + 删除 -->
-					<view class="card-header">
-						<select class="key-select" :value="getKeyIndex(item.key)" @change="e => onKeyChange(idx, e)">
-							<option v-for="(fk, i) in functionKeys" :key="fk.key" :value="i">{{ fk.label }} ({{ fk.key
-							}})</option>
-						</select>
-						<view class="mini-btn del" @click.stop="removeRow(idx)">删除</view>
-						<view class="mini-btn paste" @click.stop="paste(idx)">粘贴</view>
-					</view>
-
-					<!-- 第二行：基址偏移 -->
-					<view class="row">
-						<text class="row-label">基址偏移</text>
-						<input class="row-input" v-model="item.base" placeholder="0x54A3B48"
-							@focus="onInputFocus(idx)" />
-					</view>
-
-					<!-- 第三行：多级偏移链 -->
-					<view class="chain-block">
-						<view class="chain-header">
-							<text class="row-label">偏移链 ({{ item.chain.length }}/{{ MAX_CHAIN }})</text>
-							<view class="mini-btn add-chain" :class="{ 'is-disabled': item.chain.length >= MAX_CHAIN }"
-								@click.stop="item.chain.length >= MAX_CHAIN ? null : addChain(idx)">+ 加一级</view>
+			<!-- 配置列表 -->
+			<scroll-view class="list" scroll-y :scroll-top="scrollTop" :scroll-with-animation="true" @scroll="onScroll"
+				:style="{ height: listHeight + 'px' }">
+				<view ref="listContentRef" class="list-content">
+					<view v-for="(item, idx) in list" :key="item.id" class="card"
+						:class="{ 'card-active': idx === highlightIndex }">
+						<!-- 第一行：功能 key 选择 + 删除 -->
+						<view class="card-header">
+							<select class="key-select" :value="getKeyIndex(item.key)"
+								@change="e => onKeyChange(idx, e)">
+								<option v-for="(fk, i) in functionKeys" :key="fk.key" :value="i">{{ fk.label }} ({{
+									fk.key
+								}})</option>
+							</select>
+							<view class="mini-btn del" @click.stop="removeRow(idx)">删除</view>
+							<view class="mini-btn paste" @click.stop="paste(idx)">粘贴</view>
 						</view>
-						<view class="chain-list">
-							<view v-for="(c, ci) in item.chain" :key="c.id" class="chain-item">
-								<text class="chain-idx">[{{ ci }}]</text>
-								<input class="chain-input" v-model="c.val" placeholder="0xC48"
-									@focus="onInputFocus(idx)" />
-								<view v-if="item.chain.length > 1" class="mini-btn del-chain"
-									@click.stop="removeChain(idx, c.id)">×</view>
+
+						<!-- 第二行：基址偏移 -->
+						<view class="row">
+							<text class="row-label">基址偏移</text>
+							<input class="row-input" v-model="item.base" placeholder="0x54A3B48"
+								@focus="onInputFocus(idx)" />
+						</view>
+
+						<!-- 第三行：多级偏移链 -->
+						<view class="chain-block">
+							<view class="chain-header">
+								<text class="row-label">偏移链 ({{ item.chain.length }}/{{ MAX_CHAIN }})</text>
+								<view class="mini-btn add-chain"
+									:class="{ 'is-disabled': item.chain.length >= MAX_CHAIN }"
+									@click.stop="item.chain.length >= MAX_CHAIN ? null : addChain(idx)">+ 加一级</view>
+							</view>
+							<view class="chain-list">
+								<view v-for="(c, ci) in item.chain" :key="c.id" class="chain-item">
+									<text class="chain-idx">[{{ ci + 1 }}]</text>
+									<input class="chain-input" v-model="c.val" placeholder="0xC48"
+										@focus="onInputFocus(idx)" />
+									<view v-if="item.chain.length > 1" class="mini-btn del-chain"
+										@click.stop="removeChain(idx, c.id)">×</view>
+								</view>
 							</view>
 						</view>
-					</view>
 
-					<!-- 预览 -->
-					<view class="preview">
-						<text class="preview-label">预览:</text>
-						<text class="preview-code">{{ formatPreview(item) }}</text>
-					</view>
-				</view>
-
-				<!-- 空状态 -->
-				<view v-if="list.length === 0" class="empty">
-					<text>暂无配置，点击「+ 新增」开始</text>
-				</view>
-			</view>
-		</scroll-view>
-
-		<!-- 底部保存按钮 -->
-		<view class="footer">
-			<view class="save-btn" @click="onSave">保存配置</view>
-		</view>
-
-		<!-- ========== 弹窗：选择要设定的功能 ========== -->
-		<view v-if="showFuncPicker" class="modal-mask" @click="closeFuncPicker">
-			<view class="modal-box" @click.stop>
-				<view class="modal-title">选择要设定的功能</view>
-				<scroll-view class="modal-list" scroll-y>
-					<view class="modal-grid">
-						<view v-for="fk in functionKeys" :key="fk.key" class="modal-item"
-							:class="{ active: importTargetKey === fk.key }" @click="onModalItemClick(fk.key)">
-							<text class="modal-item-label">{{ fk.label }}</text>
-							<text class="modal-item-code">{{ fk.key }}</text>
+						<!-- 预览 -->
+						<view class="preview">
+							<text class="preview-label">预览:</text>
+							<text class="preview-code">{{ formatPreview(item) }}</text>
 						</view>
 					</view>
-				</scroll-view>
-				<view class="modal-footer">
-					<view class="mini-btn reset" @click="closeFuncPicker">取消</view>
-					<view class="mini-btn add" :class="{ 'is-disabled': !importTargetKey }"
-						@click="importTargetKey && onFuncPicked()">确定</view>
+
+					<!-- 空状态 -->
+					<view v-if="list.length === 0" class="empty">
+						<text>暂无配置，点击「+ 新增」开始</text>
+					</view>
+				</view>
+			</scroll-view>
+
+			<!-- 底部保存按钮 -->
+			<view class="footer">
+				<view class="save-btn" @click="onSave">保存配置</view>
+			</view>
+
+			<!-- ========== 弹窗：选择要设定的功能 ========== -->
+			<view v-if="showFuncPicker" class="modal-mask" @click="closeFuncPicker">
+				<view class="modal-box" @click.stop>
+					<view class="modal-title">选择要设定的功能</view>
+					<scroll-view class="modal-list" scroll-y>
+						<view class="modal-grid">
+							<view v-for="fk in functionKeys" :key="fk.key" class="modal-item"
+								:class="{ active: importTargetKey === fk.key }" @click="onModalItemClick(fk.key)">
+								<text class="modal-item-label">{{ fk.label }}</text>
+								<text class="modal-item-code">{{ fk.key }}</text>
+							</view>
+						</view>
+					</scroll-view>
+					<view class="modal-footer">
+						<view class="mini-btn reset" @click="closeFuncPicker">取消</view>
+						<view class="mini-btn add" :class="{ 'is-disabled': !importTargetKey }"
+							@click="importTargetKey && onFuncPicked()">确定</view>
+					</view>
 				</view>
 			</view>
-		</view>
 
-		<!-- ========== 弹窗：粘贴指针链 ========== -->
-		<view v-if="pasteVisible" class="modal-mask" @click.self="closePaste">
-			<view class="modal-box paste-box">
-				<view class="modal-title">粘贴指针链</view>
+			<!-- ========== 弹窗：粘贴指针链 ========== -->
+			<view v-if="pasteVisible" class="modal-mask" @click.self="closePaste">
+				<view class="modal-box paste-box">
+					<view class="modal-title">粘贴指针链</view>
 
-				<view class="paste-hint">
-					<text>支持格式（单条）：</text>
-					<text class="paste-hint-code">Sky-iOS-Gold+0x529E8D0+0x1300+0x6C44</text>
-					<text class="paste-hint-code">[Sky-iOS-Gold+0x4885C30]+0x108+0x4A24</text>
-				</view>
+					<view class="paste-hint">
+						<text>支持格式（单条）：</text>
+						<text class="paste-hint-code">Sky-iOS-Gold+0x529E8D0+0x1300+0x6C44</text>
+						<text class="paste-hint-code">[Sky-iOS-Gold+0x4885C30]+0x108+0x4A24</text>
+					</view>
 
-				<textarea class="paste-textarea" v-model="pasteInput" placeholder="在此粘贴指针链..." auto-height
-					:maxlength="512" />
+					<textarea class="paste-textarea" v-model="pasteInput" placeholder="在此粘贴指针链..." auto-height
+						:maxlength="512" />
 
-				<view class="paste-footer">
-					<view class="mini-btn reset" @click="closePaste">取消</view>
-					<view class="mini-btn add" @click="confirmPaste">确定</view>
+					<view class="paste-footer">
+						<view class="mini-btn reset" @click="closePaste">取消</view>
+						<view class="mini-btn add" @click="confirmPaste">确定</view>
+					</view>
 				</view>
 			</view>
 		</view>
@@ -116,24 +124,25 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 
 import {
-	loadOffsets,
-	saveOffsets,
-	resetOffsets,
+	applyNewConfig,
 	exportAsJS,
 	getKeyOptions,
 	getUpdateStatus,
-	applyNewConfig,
 	keepLocalConfig,
+	loadOffsets,
+	resetOffsets,
+	saveOffsets,
 	syncHashSilently
 } from '@/common/offsetsStore.js'
 
 import { getLabel } from '@/common/functionLabels.js'
-import { clearOffsets, clearAllAddrCache } from '@/common/h5gg.js'
-import { parseText, toChainPair, filterStableChains, checkHeader } from '@/common/pointerImporter.js'
-import { readFileStream, extractFile } from '@/common/fileStreamReader.js'
+import { clearAllAddrCache, clearOffsets } from '@/common/h5gg.js'
+import { checkHeader, filterStableChains, parseText, toChainPair } from '@/common/pointerImporter.js'
+import { extractFile, readFileStream } from '@/common/fileStreamReader.js'
+import PageDevMonitor  from './PageDevMonitor.vue'
 
 const listHeight = ref(300)
 const scrollTop = ref(0)
@@ -147,6 +156,9 @@ let viewportHeight = 0
 let observer = null
 let focusScrollTimer = null
 let scrollFinalizeTimer = null
+
+const showMonitor = ref(false)
+function openDev() { showMonitor.value = true }
 
 // ===== 唯一 id 生成器 =====
 let _uid = 0
@@ -862,6 +874,12 @@ async function applyChainToTarget(c) {
 </script>
 
 <style scoped>
+.page-wrapper {
+	width: 100%;
+	height: 100%;
+	position: relative;
+}
+
 .page {
 	width: 100%;
 	height: 100%;
@@ -1123,6 +1141,11 @@ async function applyChainToTarget(c) {
 	color: #fff;
 }
 
+.mini-btn.dev {
+	background: #ff2d55;
+	color: #fff;
+}
+
 .mini-btn.add-chain {
 	background: #007aff;
 	color: #fff;
@@ -1210,7 +1233,7 @@ async function applyChainToTarget(c) {
 	flex-wrap: wrap;
 	/* ★ 横向换行 */
 	gap: 4px;
-	padding: 0px;
+	padding: 0;
 }
 
 /* ★ 3 列：33.33% - gap*2/3，gap=6 时减 4px 留余量 */

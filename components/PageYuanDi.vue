@@ -53,45 +53,45 @@
 </template>
 
 <script setup>
-	// ===== iOS Safari 触摸事件处理 =====
-	let touchStartTime = 0
+// ===== iOS Safari 触摸事件处理 =====
+let touchStartTime = 0
 
-	// 阻止默认触摸行为，避免Safari的默认行为干扰
-	function preventTouch(e) {
-		e.stopPropagation()
-	}
+// 阻止默认触摸行为，避免Safari的默认行为干扰
+function preventTouch(e) {
+	e.stopPropagation()
+}
 
-	// ===== 原样保留的方法 =====
-	function mrrw() {
-		console.log('mrrw')
-	}
+// ===== 原样保留的方法 =====
+function mrrw() {
+	console.log('mrrw')
+}
 
-	function qtpt() {
-		console.log('qtpt')
-	}
+function qtpt() {
+	console.log('qtpt')
+}
 
-	function ydrl() {
-		console.log('ydrl')
-	}
+function ydrl() {
+	console.log('ydrl')
+}
 
-	function hddb() {
-		console.log('hddb')
-	}
+function hddb() {
+	console.log('hddb')
+}
 
-	function ydxg() {
-		console.log('ydxg')
-	}
+function ydxg() {
+	console.log('ydxg')
+}
 
-	function ydgy() {
-		console.log('ydgy')
-	}
+function ydgy() {
+	console.log('ydgy')
+}
 
-	function jjrw() {
-		h5gg.searchNumber('27491', 'I32', '0x110000000', '0x200000000');
-		h5gg.editAll('0', 'I32');
-		uni.showToast({
-			icon: 'none',
-			title: '快去领取'
-		})
-	}
+function jjrw() {
+	h5gg.searchNumber('27491', 'I32', '0x110000000', '0x200000000');
+	h5gg.editAll('0', 'I32');
+	uni.showToast({
+		icon: 'none',
+		title: '快去领取'
+	})
+}
 </script>

@@ -3,7 +3,6 @@
         <div v-if="visible" class="dialog-mask" @click.self="handleCancel">
             <div class="dialog-box">
                 <div class="dialog-title">{{ title }}</div>
-
                 <input v-if="type === 'prompt'" ref="inputRef" v-model="inputValue" class="dialog-input"
                     :focus="autoFocus" :placeholder="placeholder" @keyup.enter="handleConfirm" />
 
@@ -17,7 +16,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue' 
+import {nextTick, onMounted, ref} from 'vue'
 
 const props = defineProps({
     title: { type: String, default: '提示' },

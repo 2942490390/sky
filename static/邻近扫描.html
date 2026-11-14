@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>邻近规律扫描器 · 权限识别版</title>
+    <style>
+        :root {
+            --bg: #0b0e14;
+            --panel: rgba(20, 24, 33, .72);
+            --line: rgba(255, 255, 255, .08);
+            --txt: #e6edf3;
+            --sub: #8b98a9;
+            --acc: #5ad1ff;
+            --hit: #7CFFB2;
+            --bad: #ff7a7a;
+            --rw: #7CFFB2;
+            --ro: #ffd166;
+            --na: #ff7a7a;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            color: var(--txt);
+            font: 13px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro", Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #inputbar {
+            background: var(--panel);
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(.4, 0, .2, 1);
+            max-height: 500px;
+        }
+
+        #inputbar.collapsed {
+            max-height: 36px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            cursor: pointer;
+            user-select: none;
+            min-height: 36px;
+        }
+
+        .panel-header:active {
+            background: rgba(255, 255, 255, .04);
+        }
+
+        .panel-title {
+            font-size: 12px;
+            color: var(--sub);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .panel-toggle {
+            font-size: 11px;
+            color: var(--acc);
+            padding: 2px 8px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+        }
+
+        .panel-body {
+            padding: 0 12px 10px 12px;
+        }
+
+        #inputbar.collapsed .panel-body {
+            display: none;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .row:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            color: var(--sub);
+            font-size: 11px;
+            min-width: 48px;
+        }
+
+        input,
+        select {
+            background: rgba(0, 0, 0, .35);
+            border: 1px solid var(--line);
+            color: var(--txt);
+            border-radius: 9px;
+            padding: 7px 9px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        input {
+            flex: 1;
+            min-width: 110px;
+            font-family: ui-monospace, Menlo, monospace;
+        }
+
+        select {
+            min-width: 64px;
+        }
+
+        .seg {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .seg button {
+            background: rgba(255, 255, 255, .05);
+            border: 1px solid var(--line);
+            color: var(--sub);
+            border-radius: 8px;
+            padding: 6px 9px;
+            font-size: 12px;
+        }
+
+        .seg button.on {
+            background: var(--acc);
+            color: #001018;
+            border-color: transparent;
+            font-weight: 600;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #39b7ff, #5ad1ff);
+            color: #001018;
+            border: none;
+            border-radius: 10px;
+            padding: 9px 14px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .btn.ghost {
+            background: rgba(255, 255, 255, .06);
+            color: var(--txt);
+        }
+
+        .btn.danger {
+            background: linear-gradient(135deg, #ff9f7a, #ff7a7a);
+        }
+
+        .btn.small {
+            padding: 5px 10px;
+            font-size: 11px;
+        }
+
+        .btn:active {
+            transform: scale(.97);
+        }
+
+        .btn:disabled {
+            opacity: .5;
+        }
+
+        .opt {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--sub);
+        }
+
+        .opt input {
+            width: 16px;
+            height: 16px;
+            flex: none;
+        }
+
+        #status {
+            padding: 6px 12px;
+            font-size: 11px;
+            color: var(--sub);
+            border-bottom: 1px solid var(--line);
+            min-height: 26px;
+            font-family: ui-monospace, monospace;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #status .toggle-link {
+            color: var(--acc);
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        #toolbar {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            transition: max-height 0.3s ease;
+            overflow: hidden;
+            max-height: 60px;
+        }
+
+        #toolbar.collapsed {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        #toolbar input[type=text] {
+            min-width: 140px;
+            flex: 1;
+        }
+
+        #selInfo {
+            font-size: 11px;
+            color: var(--acc);
+        }
+
+        #resultHead {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: var(--sub);
+            border-bottom: 1px solid var(--line);
+        }
+
+        #hitCount {
+            color: var(--hit);
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        #list {
+            flex: 1;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 4px 0;
+        }
+
+        .item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, .04);
+            font-family: ui-monospace, Menlo, monospace;
+            flex-wrap: wrap;
+        }
+
+        .item.sel {
+            background: rgba(90, 209, 255, .10);
+        }
+
+        .item .chk {
+            flex: none;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--acc);
+        }
+
+        .item .idx {
+            color: var(--sub);
+            width: 46px;
+            flex: none;
+            font-size: 11px;
+        }
+
+        .item .addr {
+            flex: 1;
+            min-width: 160px;
+            color: var(--acc);
+            word-break: break-all;
+        }
+
+        .item .val {
+            color: var(--hit);
+            font-weight: 600;
+            min-width: 80px;
+        }
+
+        .item .off {
+            color: #c9a0ff;
+            font-size: 11px;
+            min-width: 190px;
+        }
+
+        .item .perm {
+            flex: none;
+            font-size: 10px;
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-weight: 700;
+        }
+
+        .item .perm.rw {
+            background: rgba(124, 255, 178, .15);
+            color: var(--rw);
+        }
+
+        .item .perm.ro {
+            background: rgba(255, 209, 102, .15);
+            color: var(--ro);
+        }
+
+        .item .perm.na {
+            background: rgba(255, 122, 122, .15);
+            color: var(--na);
+        }
+
+        .item .cp {
+            color: var(--sub);
+            font-size: 11px;
+            padding: 3px 7px;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            cursor: pointer;
+        }
+
+        /* ===== 多类型小字区域 ===== */
+        .multitype {
+            flex-basis: 100%;
+            padding: 3px 0 3px 78px;
+            display: none;
+            flex-wrap: wrap;
+            gap: 6px 14px;
+        }
+
+        .multitype.show {
+            display: flex;
+        }
+
+        .mt-item {
+            font-size: 8px;
+            color: var(--sub);
+            line-height: 1.4;
+        }
+
+        .mt-item .t {
+            color: var(--acc);
+            font-weight: 600;
+            margin-right: 2px;
+        }
+
+        .mt-item.bad .v {
+            color: var(--na);
+        }
+
+        .mt-item .v {
+            color: var(--txt);
+        }
+
+        #empty {
+            padding: 40px 12px;
+            text-align: center;
+            color: var(--sub);
+        }
+
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, .82);
+            color: #fff;
+            padding: 9px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity .25s;
+            pointer-events: none;
+            z-index: 99;
+            max-width: 80%;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <!-- 搜索面板（可折叠） -->
+        <div id="inputbar">
+            <div class="panel-header" onclick="toggleInputbar()">
+                <span class="panel-title">🔍 搜索面板</span>
+                <span class="panel-toggle" id="inputbarToggleIcon">▲ 收起</span>
+            </div>
+            <div class="panel-body">
+                <div class="row">
+                    <label>地址</label>
+                    <input id="inAddr" placeholder="0x102345678" spellcheck="false">
+                </div>
+                <div class="row">
+                    <label>数值</label>
+                    <input id="inValue" placeholder="例如 100 或 3.14 或 50~200" spellcheck="false">
+                </div>
+                <div class="row">
+                    <label>指数</label>
+                    <input id="inShift" placeholder="20（默认2^20，最大2^24）" value="20" spellcheck="false">
+                </div>
+                <div class="row">
+                    <label>类型</label>
+                    <div class="seg" id="typeSeg">
+                        <button data-t="I8">I8</button>
+                        <button data-t="I16">I16</button>
+                        <button data-t="I32" class="on">I32</button>
+                        <button data-t="I64">I64</button>
+                        <button data-t="F32">F32</button>
+                        <button data-t="F64">F64</button>
+                    </div>
+                    <label class="opt" title="写入验证会真实写入再回滚，对代码页有崩溃风险">
+                        <input type="checkbox" id="inProbe"> 精确权限探测
+                    </label>
+                    <button class="btn" id="btnScan" style="margin-left:auto;">开始扫描</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="status">
+            <span id="statusText">就绪</span>
+            <span class="toggle-link" onclick="toggleInputbar()">展开/收起搜索</span>
+        </div>
+
+        <!-- 工具栏（可折叠） -->
+        <div id="toolbar">
+            <input type="text" id="inSetVal" placeholder="赋值数值（对勾选地址生效）">
+            <span id="selInfo">已选 0</span>
+            <button class="btn ghost" id="btnSelAll">全选</button>
+            <button class="btn ghost" id="btnSelInv">反选</button>
+            <button class="btn danger" id="btnApply">批量赋值</button>
+        </div>
+
+        <div id="resultHead">
+            <span>命中：<span id="hitCount">0</span></span>
+            <span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <button class="btn ghost small" id="btnRefresh" title="重新读取所有地址的最新值">🔄 刷新值</button>
+                <span class="toggle-link" id="mtToggle" onclick="toggleMultiType()">▸ 多类型</span>
+                <span class="toggle-link" onclick="toggleToolbar()">▾ 工具栏</span>
+                <button class="btn ghost small" id="btnCopy">复制JSON</button>
+            </span>
+        </div>
+        <div id="list">
+            <div id="empty">暂无结果，先填地址和数值开始扫描</div>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <script>
+        "use strict";
+
+        /* ========== 折叠控制 ========== */
+        function toggleInputbar() {
+            const el = document.getElementById('inputbar'), icon = document.getElementById('inputbarToggleIcon');
+            el.classList.toggle('collapsed');
+            icon.textContent = el.classList.contains('collapsed') ? '▼ 展开' : '▲ 收起';
+        }
+        function toggleToolbar() { document.getElementById('toolbar').classList.toggle('collapsed'); }
+        let MT_SHOW = false;
+        function toggleMultiType() {
+            MT_SHOW = !MT_SHOW;
+            document.querySelectorAll('.multitype').forEach(el => el.classList.toggle('show', MT_SHOW));
+            document.getElementById('mtToggle').textContent = MT_SHOW ? '▾ 多类型' : '▸ 多类型';
+        }
+
+        /* ========== 常量 ========== */
+        const TYPE_SIZE = { I8: 1, I16: 2, I32: 4, I64: 8, F32: 4, F64: 8 };
+        const ALL_TYPES = ['I8', 'I16', 'I32', 'I64', 'F32', 'F64'];
+        const MAX_SHIFT = 24, MAX_RENDER = 5000;
+        let CUR_TYPE = 'I32', CENTER_ADDR = 0n;
+
+        /* ========== 工具 ========== */
+        function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 1600); }
+        function parseHexAddr(s) { s = (s || '').trim().toLowerCase(); if (!s) throw new Error('地址为空'); if (s.startsWith('0x')) s = s.slice(2); if (/^\d+$/.test(s)) return BigInt(s); const h = s.replace(/[^0-9a-f]/g, ''); if (!h) throw new Error('地址非法'); return BigInt('0x' + h); }
+        function fmtAddr(bn) { return '0x' + bn.toString(16).toUpperCase(); }
+        function signedOffset(c, a) { return a - c; }
+        function fmtOffset(diff, step) { const sign = diff < 0n ? '-' : '+', abs = diff < 0n ? -diff : diff; return { dec: sign + abs.toString(), hex: sign + '0x' + abs.toString(16).toUpperCase(), slots: (diff / step).toString() }; }
+        function safeRead(addrBN, type) { try { const v = h5gg.getValue(fmtAddr(addrBN), type); if (v === null || v === undefined || v === '') return { ok: false }; return { ok: true, value: v }; } catch (e) { return { ok: false }; } }
+        function safeWrite(addrBN, valStr, type) { try { return h5gg.setValue(fmtAddr(addrBN), valStr, type) === true; } catch (e) { return false; } }
+
+        /* 读一个地址在所有类型下的值（扫描/刷新/多类型都用它） */
+        function readAllTypes(addrBN, primaryType) {
+            const out = { primary: null, types: {} };
+            const prim = safeRead(addrBN, primaryType);
+            if (prim.ok) out.primary = primaryType === 'F32' || primaryType === 'F64' ? parseFloat(Number(prim.value).toFixed(4)) : Number(prim.value);
+            ALL_TYPES.forEach(t => {
+                if (t === primaryType) { out.types[t] = out.primary; return; }
+                const r = safeRead(addrBN, t);
+                if (!r.ok) { out.types[t] = null; return; }
+                const n = Number(r.value);
+                out.types[t] = (t === 'F32' || t === 'F64') ? parseFloat(n.toFixed(4)) : n;
+            });
+            return out;
+        }
+
+        /* ========== 权限推断 ========== */
+        function probePermission(addrBN, type, doWriteProbe) {
+            const r = safeRead(addrBN, type);
+            if (!r.ok) return { perm: 'na', readable: false, writable: false };
+            let writable = false;
+            if (doWriteProbe) {
+                const orig = r.value, backup = Number(orig);
+                const probeVal = (type === 'F32' || type === 'F64') ? (backup + 1.234).toString() : (backup + 1).toString();
+                if (safeWrite(addrBN, probeVal, type)) { const after = safeRead(addrBN, type); if (after.ok && Number(after.value) === Number(probeVal)) writable = true; }
+                safeWrite(addrBN, orig, type);
+            }
+            return { perm: writable ? 'rw' : 'ro', readable: true, writable };
+        }
+        const PERM_TEXT = { rw: '可读可写', ro: '只读', na: '不可访问' };
+        const PERM_TITLE = { rw: '可读可写（堆/数据段）', ro: '只读（常量/代码段）', na: '不可访问' };
+
+        /* ========== 匹配规则 ========== */
+        function buildMatcher(rawValue, type) {
+            const isFloat = (type === 'F32' || type === 'F64');
+            if (rawValue.indexOf('~') > -1) { const p = rawValue.split('~').map(s => Number(s.trim())); const lo = p[0], hi = p[1]; if (isFloat) { const eps = Number(h5gg_getTolerance()); return v => (v >= lo - eps) && (v <= hi + eps); } return v => v >= lo && v <= hi; }
+            const target = Number(rawValue);
+            if (isFloat) { const eps = Number(h5gg_getTolerance()); return v => Math.abs(v - target) <= eps; }
+            return v => v === target;
+        }
+        function h5gg_getTolerance() { return window.__floatTol || 0.001; }
+
+        /* ========== 核心扫描 ========== */
+        function scanNearby(centerBN, type, shift, opts) {
+            const size = TYPE_SIZE[type], step = BigInt(size);
+            const radius = 1n << BigInt(shift);
+            const start = centerBN - radius;
+            const span = radius * 2n;
+            const totalSlots = Number(span / step);
+            const chunkSize = opts.chunkSize || 8192, yieldEvery = opts.yieldEvery || 6;
+            const matcher = opts.matcher, doProbe = !!opts.probe, onProgress = opts.onProgress || null;
+            const matches = [];
+
+            return new Promise((resolve, reject) => {
+                let slotIdx = 0, scanned = 0, errors = 0, hitProbe = 0;
+                const t0 = performance.now();
+                function runChunk() {
+                    const lo = slotIdx, hi = Math.min(lo + chunkSize, totalSlots);
+                    for (let i = lo; i < hi; i++) {
+                        const addr = start + BigInt(i) * step;
+                        const all = readAllTypes(addr, type);   // 一次扫类型+主值
+                        scanned++;
+                        if (all.primary === null && all.types[type] === undefined) { errors++; continue; }
+                        const num = all.types[type];
+                        if (num === null || Number.isNaN(Number(num))) { errors++; continue; }
+                        if (matcher(Number(num))) {
+                            const off = signedOffset(centerBN, addr), foff = fmtOffset(off, step);
+                            let permInfo = { perm: 'unknown' };
+                            if (doProbe) {
+                                const r = safeRead(addr, type);
+                                if (r.ok) {
+                                    const orig = r.value, backup = Number(orig);
+                                    const probeVal = (type === 'F32' || type === 'F64') ? (backup + 1.234).toString() : (backup + 1).toString();
+                                    let writable = false;
+                                    if (safeWrite(addr, probeVal, type)) { const after = safeRead(addr, type); if (after.ok && Number(after.value) === Number(probeVal)) writable = true; }
+                                    safeWrite(addr, orig, type);
+                                    permInfo = { perm: writable ? 'rw' : 'ro', writable };
+                                    if (writable) hitProbe++;
+                                } else permInfo = { perm: 'na', writable: false };
+                            } else permInfo = { perm: 'ro', writable: false };
+                            matches.push({
+                                address: fmtAddr(addr), value: Number(num), type,
+                                offset: foff.dec, offsetHex: foff.hex, offsetSlots: foff.slots,
+                                perm: permInfo.perm, writable: permInfo.writable,
+                                types: all.types   // 保留其他类型的值
+                            });
+                        }
+                    }
+                    slotIdx = hi;
+                    if (slotIdx < totalSlots) {
+                        if (onProgress && (slotIdx / chunkSize) % yieldEvery === 0) onProgress(slotIdx / totalSlots, scanned, matches.length, errors, hitProbe);
+                        setTimeout(runChunk, 0);
+                    } else {
+                        const ms = performance.now() - t0;
+                        resolve({ matches, stats: { scanned, totalSlots, errors, hitProbe, ms, opsPerSec: Math.round(scanned / (ms / 1000)), shift } });
+                    }
+                }
+                runChunk();
+            });
+        }
+
+        /* ========== 渲染 ========== */
+        let RENDERED = [], LAST_DATA = null;
+        function renderResults(data) {
+            const { matches, stats } = data;
+            document.getElementById('hitCount').textContent = matches.length;
+            const list = document.getElementById('list'); list.innerHTML = '';
+            if (matches.length === 0) {
+                list.innerHTML = '<div id="empty">未命中<br>扫描 ' + stats.scanned + ' 槽 · 异常 ' + stats.errors + ' · ' + stats.ms.toFixed(0) + 'ms</div>';
+                return;
+            }
+            RENDERED = matches.map(() => ({ checked: false }));
+            const show = matches.slice(0, MAX_RENDER);
+            const frag = document.createDocumentFragment();
+            show.forEach((m, i) => {
+                const row = document.createElement('div'); row.className = 'item'; row.dataset.idx = i;
+                const chk = document.createElement('input'); chk.type = 'checkbox'; chk.className = 'chk';
+                chk.onchange = () => { RENDERED[i].checked = chk.checked; updateSel(); row.classList.toggle('sel', chk.checked); };
+                const idx = document.createElement('span'); idx.className = 'idx'; idx.textContent = (i + 1);
+                const addr = document.createElement('span'); addr.className = 'addr'; addr.textContent = m.address;
+                const val = document.createElement('span'); val.className = 'val'; val.textContent = m.value;
+                const off = document.createElement('span'); off.className = 'off';
+                off.innerHTML = 'Δ ' + m.offset + ' <span style="opacity:.6">(' + m.offsetHex + ' · ' + m.offsetSlots + '槽)</span>';
+                const perm = document.createElement('span'); perm.className = 'perm ' + (m.perm === 'rw' ? 'rw' : m.perm === 'ro' ? 'ro' : 'na');
+                perm.textContent = PERM_TEXT[m.perm] || '未知'; perm.title = PERM_TITLE[m.perm] || '';
+                const cp = document.createElement('span'); cp.className = 'cp'; cp.textContent = '复制';
+                cp.onclick = () => copyText(m.address);
+
+                // 多类型小字（8px）
+                const mt = document.createElement('div'); mt.className = 'multitype';
+                ALL_TYPES.forEach(t => {
+                    if (t === m.type) return;   // 主类型已经在大字显示
+                    const v = m.types[t];
+                    const it = document.createElement('span');
+                    it.className = 'mt-item' + (v === null ? ' bad' : '');
+                    const disp = v === null ? '不可读' : (typeof v === 'number' && (t === 'F32' || t === 'F64') ? v.toFixed(4) : v);
+                    it.innerHTML = '<span class="t">' + t + '</span><span class="v">' + disp + '</span>';
+                    mt.appendChild(it);
+                });
+
+                row.appendChild(chk); row.appendChild(idx); row.appendChild(addr); row.appendChild(val); row.appendChild(off); row.appendChild(perm); row.appendChild(cp);
+                row.appendChild(mt);
+                frag.appendChild(row);
+            });
+            list.appendChild(frag);
+            if (matches.length > MAX_RENDER) {
+                const more = document.createElement('div'); more.style.cssText = 'padding:14px;text-align:center;color:var(--sub);';
+                more.textContent = '仅渲染前 ' + MAX_RENDER + ' 条（共 ' + matches.length + ' 命中），完整数据走「复制JSON」';
+                list.appendChild(more);
+            }
+            document.getElementById('statusText').textContent = `完成 · 2^${stats.shift} · ${stats.scanned}槽 · 命中${matches.length} · ${stats.ms.toFixed(0)}ms · ${stats.opsPerSec}/s`;
+            updateSel();
+        }
+        function updateSel() { document.getElementById('selInfo').textContent = '已选 ' + RENDERED.filter(r => r && r.checked).length; }
+
+        /* ========== 刷新所有值 ========== */
+        async function refreshAll() {
+            if (!LAST_DATA || LAST_DATA.matches.length === 0) { toast('没有可刷新的结果'); return; }
+            const btn = document.getElementById('btnRefresh');
+            btn.disabled = true; const oldText = btn.textContent; btn.textContent = '刷新中…';
+            const mArr = LAST_DATA.matches;
+            const total = mArr.length;
+            const t0 = performance.now();
+            let ok = 0, fail = 0;
+
+            // 分块让出主线程，避免卡死
+            await new Promise(resolve => {
+                let i = 0, CHUNK = 2000;
+                function step() {
+                    const end = Math.min(i + CHUNK, total);
+                    for (; i < end; i++) {
+                        const m = mArr[i];
+                        const all = readAllTypes(parseHexAddr(m.address), m.type);
+                        m.value = all.primary !== null ? all.primary : Number(m.types[m.type] || 0);
+                        m.types = all.types;
+                        if (all.primary === null) fail++; else ok++;
+                    }
+                    if (i < total) { setTimeout(step, 0); }
+                    else resolve();
+                }
+                step();
+            });
+
+            renderResults(LAST_DATA);
+            // 保持多类型展开状态
+            if (MT_SHOW) document.querySelectorAll('.multitype').forEach(el => el.classList.add('show'));
+            btn.disabled = false; btn.textContent = oldText;
+            toast(`已刷新 ${total} 个地址 · ${(performance.now() - t0).toFixed(0)}ms`);
+        }
+
+        /* ========== JSON & 复制 ========== */
+        function buildJSON() { return JSON.stringify(LAST_DATA, null, 2); }
+        function copyText(t) { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => toast('已复制')).catch(() => fallbackCopy(t)); else fallbackCopy(t); }
+        function fallbackCopy(t) { const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('已复制'); } catch (e) { toast('复制失败'); } document.body.removeChild(ta); }
+
+        /* ========== 批量赋值 ========== */
+        function applyValues() {
+            const valRaw = document.getElementById('inSetVal').value.trim();
+            if (!valRaw) { toast('请填写要赋的值'); return; }
+            const sel = RENDERED.map((r, i) => r && r.checked ? i : -1).filter(i => i >= 0);
+            if (sel.length === 0) { toast('请先勾选要赋值的地址'); return; }
+            const type = CUR_TYPE, isFloat = (type === 'F32' || type === 'F64');
+            let writeVal = valRaw;
+            if (isFloat) { const f = parseFloat(valRaw); if (Number.isNaN(f)) { toast('浮点数值非法'); return; } writeVal = f.toString(); }
+            else { const n = Number(valRaw); if (!Number.isInteger(n)) { toast('请输入整数'); return; } writeVal = n.toString(); }
+            let ok = 0, fail = 0;
+            sel.forEach(i => { const m = LAST_DATA.matches[i]; if (safeWrite(parseHexAddr(m.address), writeVal, type)) ok++; else fail++; });
+            toast(`赋值完成 · 成功 ${ok} · 失败 ${fail}`);
+            refreshAll();
+        }
+        function setAllChecks(v) { RENDERED.forEach((r, i) => { r.checked = v; const row = document.querySelector('.item[data-idx="' + i + '"]'); if (row) { row.querySelector('.chk').checked = v; row.classList.toggle('sel', v); } }); updateSel(); }
+
+        /* ========== 全屏适配 ========== */
+        function fillScreen(w, h) { try { setWindowRect(0, 0, w, h); } catch (e) { } try { setWindowDrag(0, 0, w, 48); } catch (e) { } try { setWindowTouch(true); } catch (e) { } }
+        if (typeof setLayoutAction === 'function') setLayoutAction(function (w, h) { fillScreen(w, h); });
+        fillScreen(window.innerWidth || 375, window.innerHeight || 667);
+
+        /* ========== 交互 ========== */
+        document.querySelectorAll('#typeSeg button').forEach(b => { b.onclick = () => { document.querySelectorAll('#typeSeg button').forEach(x => x.classList.remove('on')); b.classList.add('on'); CUR_TYPE = b.dataset.t; }; });
+        document.getElementById('btnScan').onclick = async function () {
+            const aRaw = document.getElementById('inAddr').value, vRaw = document.getElementById('inValue').value.trim(), sRaw = document.getElementById('inShift').value.trim() || '20', doProbe = document.getElementById('inProbe').checked;
+            if (!aRaw) { toast('请填写内存地址'); return; } if (!vRaw) { toast('请填写目标数值'); return; }
+            let center, shift; try { center = parseHexAddr(aRaw); } catch (e) { toast('地址格式错误'); return; }
+            shift = parseInt(sRaw, 10); if (!(shift >= 0 && shift <= MAX_SHIFT)) { toast('指数范围0~' + MAX_SHIFT); return; }
+            CENTER_ADDR = center; const type = CUR_TYPE, matcher = buildMatcher(vRaw, type);
+            if (doProbe && Number((2n << BigInt(shift)) / BigInt(TYPE_SIZE[type])) > 200000) { if (!confirm('精确权限探测耗时较长，确定继续？')) return; }
+            this.disabled = true; this.textContent = '扫描中…'; document.getElementById('statusText').textContent = '扫描中·0%';
+            try {
+                const data = await scanNearby(center, type, shift, { matcher, probe: doProbe, chunkSize: 8192, yieldEvery: 6, onProgress: (p, scanned, hits, err, hitProbe) => { document.getElementById('statusText').textContent = `扫描中 · ${(p * 100).toFixed(1)}% · 已读${scanned}·命中${hits}` + (hitProbe ? `·可写${hitProbe}` : ''); } });
+                LAST_DATA = data; renderResults(data); toast(`命中 ${data.matches.length} 个地址`);
+                if (!document.getElementById('inputbar').classList.contains('collapsed')) toggleInputbar();
+            } catch (e) { document.getElementById('statusText').textContent = '扫描出错: ' + e.message; }
+            finally { this.disabled = false; this.textContent = '开始扫描'; }
+        };
+        document.getElementById('btnRefresh').onclick = refreshAll;
+        document.getElementById('btnCopy').onclick = () => { if (!LAST_DATA || LAST_DATA.matches.length === 0) { toast('没有可复制的结果'); return; } copyText(buildJSON()); };
+        document.getElementById('btnSelAll').onclick = () => setAllChecks(true);
+        document.getElementById('btnSelInv').onclick = () => { RENDERED.forEach((r, i) => { r.checked = !r.checked; const row = document.querySelector('.item[data-idx="' + i + '"]'); if (row) { row.querySelector('.chk').checked = r.checked; row.classList.toggle('sel', r.checked); } }); updateSel(); };
+        document.getElementById('btnApply').onclick = applyValues;
+        try { h5gg.setFloatTolerance('0.001'); } catch (e) { }
+    </script>
+</body>
+
+</html>

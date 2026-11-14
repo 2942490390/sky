@@ -56,7 +56,7 @@
 				<text class="fa-solid fa-bolt"></text>
 				<text>无限能量</text>
 			</view>
-			<switch :checked="swState.wxnl" color="#FFD966" style="transform: scale(0.75);" @change="wxnl" />
+			<switch :checked="swState.wxnl" color="#FFD966" style="transform: scale(0.75)" @change="wxnl" />
 		</view>
 
 		<!-- 自燃全开 -->
@@ -65,7 +65,7 @@
 				<text class="fa-solid fa-fire"></text>
 				<text>自燃全开</text>
 			</view>
-			<switch :checked="swState.burn" color="#FFD966" style="transform: scale(0.75);" @change="onBurnChange" />
+			<switch :checked="swState.burn" color="#FFD966" style="transform: scale(0.75)" @change="onBurnChange" />
 		</view>
 
 		<!-- 自动炸花 -->
@@ -74,7 +74,7 @@
 				<text class="fa-solid fa-fire-flame-curved"></text>
 				<text>自动炸花</text>
 			</view>
-			<switch :checked="swState.bloom" color="#FFD966" style="transform: scale(0.75);" @change="onBloomChange" />
+			<switch :checked="swState.bloom" color="#FFD966" style="transform: scale(0.75)" @change="onBloomChange" />
 		</view>
 
 		<!-- 吸火吸花 -->
@@ -83,7 +83,7 @@
 				<text class="fa-solid fa-fire-flame-curved"></text>
 				<text>吸火吸花</text>
 			</view>
-			<switch :checked="swState.xihuo" color="#FFD966" style="transform: scale(0.75);" @change="xihuo" />
+			<switch :checked="swState.xihuo" color="#FFD966" style="transform: scale(0.75)" @change="xihuo" />
 		</view>
 
 		<!-- 隐藏蜡烛 -->
@@ -92,7 +92,7 @@
 				<text class="fa-regular fa-eye-slash"></text>
 				<text>隐藏蜡烛</text>
 			</view>
-			<switch :checked="swState.yclz" color="#FFD966" style="transform: scale(0.75);" @change="yclz" />
+			<switch :checked="swState.yclz" color="#FFD966" style="transform: scale(0.75)" @change="yclz" />
 		</view>
 
 		<!-- 锁定高度 -->
@@ -108,46 +108,35 @@
 	</view>
 </template>
 <script setup>
+import {onUnmounted, reactive, ref} from 'vue'
+import {usePrompt} from '@/utils/usePrompt.js'
 import {
-	reactive,
-	ref,
-	onUnmounted
-} from 'vue'
-import {
-	usePrompt
-} from '../utils/usePrompt.js'
-import {
-	energyLoop,
-	stopEnergyLoop,
-	speedLoop,
-	stopSpeedLoop,
-	burnLoop,
-	bloomLoop,
-	stopBurnLoop,
-	stopBloomLoop,
-	setCandleVisibility,
-	clearCandleAddr,
-	xihuoOnceManual, stopXihuoLoop
-} from '../common/h5gg.js'
+  bloomLoop,
+  burnLoop,
+  clearCandleAddr,
+  energyLoop,
+  setCandleVisibility,
+  speedLoop,
+  stopBloomLoop,
+  stopBurnLoop,
+  stopEnergyLoop,
+  stopSpeedLoop,
+  stopXihuoLoop,
+  xihuoOnceManual
+} from '@/common/h5gg.js'
 
 import {
-	startCoordLoop,
-	stopCoordLoop,
-	setCoordAxis,
-	startAutoRun,
-	stopAutoRun as stopAutoRunFn,
-	resetAutoRunIndex,
-	isAutoRunRunning,
-	getAutoRunProgress
-} from '../common/coordRunner.js'
+  getAutoRunProgress,
+  isAutoRunRunning,
+  resetAutoRunIndex,
+  setCoordAxis,
+  startAutoRun,
+  startCoordLoop,
+  stopAutoRun as stopAutoRunFn,
+  stopCoordLoop
+} from '@/common/coordRunner.js'
 
-import {
-	startLockHeight,
-	stopLockHeight,
-	isLockHeightRunning,
-	getLockHeightValue,
-	clearLockHeightAddr
-} from '../common/lockHeight.js'
+import {clearLockHeightAddr, isLockHeightRunning, startLockHeight, stopLockHeight} from '@/common/lockHeight.js'
 
 // ===== 开关状态 =====
 const swState = reactive({
@@ -248,8 +237,7 @@ function wxnl(e) {
 
 // ===== 吸火吸花 =====
 function xihuo(e) {
-	const checked = e.detail.value
-	swState.xihuo = checked
+  swState.xihuo = e.detail.value
 	xihuoOnceManual()
 }
 

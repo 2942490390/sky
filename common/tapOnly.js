@@ -94,7 +94,11 @@ export function installTapOnly(options = {}) {
 			view: window,
 			detail: 1
 		})
-		target.dispatchEvent(clickEvent)
+		try {
+			target.dispatchEvent(clickEvent)
+		} catch (e) {
+			console.warn('[tapOnly] dispatch click 失败:', e)
+		}
 	}
 
 	const onTouchCancel = () => {

@@ -22,7 +22,7 @@
 					</select>
 				</view>
 
-				<!-- ★ 新增：主模块过滤开关 -->
+				<!-- 主模块过滤开关 -->
 				<view class="row filter-row">
 					<view class="filter-switch" :class="{ on: mainModuleFilter }" @click="toggleMainFilter">
 						<view class="switch-knob"></view>
@@ -30,7 +30,7 @@
 					<text class="filter-label">仅显示主模块指针链</text>
 				</view>
 
-				<!-- ★ 新增：保存到本地 -->
+				<!-- 保存到本地 -->
 				<view class="row save-row" v-if="mainModuleFilter">
 					<button id="saveLocal" :disabled="filteredChains.length === 0" @click="onSaveToLocal"
 						@touchstart="preventTouch">
@@ -40,33 +40,27 @@
 						📁 本地标识 ({{ savedTagsCount }})
 					</button>
 				</view>
-
 			</view>
-
 			<view class="btn-bar">
 				<button id="start" :disabled="isRunning" @click="onStart" @touchstart="preventTouch">开始搜索</button>
-				<button id="pause" :disabled="!isRunning" @click="onPause" @touchstart="preventTouch">{{ pauseFlag ?
-					'恢复' : '暂停' }}</button>
+				<button id="pause" :disabled="!isRunning" :style="{ 'display': isRunning ? 'block' : 'none' }"
+					@click="onPause" @touchstart="preventTouch">{{ pauseFlag ?
+						'恢复' : '暂停' }}</button>
 				<button id="stop" :disabled="!isRunning" @click="onStop" @touchstart="preventTouch">停止</button>
 				<button id="clear" @click="onClear" @touchstart="preventTouch">清空日志</button>
-				<button id="togglePanel" @click="onTogglePanel" @touchstart="preventTouch">{{ paramVisible ? '关闭' : '打开'
-				}}</button>
-
-				<!-- ★ 新增：解析过滤结果 -->
+				<!-- 解析过滤结果 -->
 				<button v-if="mainModuleFilter && filteredChains.length > 0" id="parseBtn" @click="onParseFiltered"
 					@touchstart="preventTouch">
 					🔍 解析结果 ({{ filteredChains.length }})
 				</button>
-
-				<!-- ★ 新增：打开本地标识管理 -->
-				<button id="localMgrBtn" @click="openLocalModal" @touchstart="preventTouch">
-					📁 本地标识
-				</button>
-
-				<a id="gotoWeb" href="/static/桶.html" target="_blank"
-					rel="noopener" @touchstart="preventTouch">跳转特征码对比</a>
+				<!-- 打开本地标识管理 -->
+				<button id="localMgrBtn" @click="openLocalModal" @touchstart="preventTouch">📁 本地标识</button>
+				<a id="gotoWeb" href="/static/桶.html" target="_blank" rel="noopener" @touchstart="preventTouch">🧰
+					特征码</a>
+				<button id="near" @click="nearByScan" @touchstart="preventTouch">🔬 邻近扫描</button>
+				<button id="togglePanel" @click="onTogglePanel" @touchstart="preventTouch">{{ paramVisible ? '关闭' : '打开'
+				}}</button>
 			</view>
-
 			<view id="logTip">
 				<text id="tipText">{{ tipText }}</text>
 				<text class="count" id="chainCount">{{ chainCount }}</text>
@@ -85,9 +79,7 @@
 				</view>
 			</scroll-view>
 		</view>
-
-
-		<!-- ★ 新增：本地标识管理弹窗 -->
+		<!-- 本地标识管理弹窗 -->
 		<view v-if="localModalVisible" class="modal-mask" @click="closeLocalModal">
 			<view class="parse-modal local-modal" @click.stop>
 				<view class="parse-head">
@@ -125,7 +117,7 @@
 			</view>
 		</view>
 
-		<!-- ★ 新增：校验结果弹窗 -->
+		<!-- 校验结果弹窗 -->
 		<view v-if="verifyModalVisible" class="modal-mask" @click="closeVerifyModal">
 			<view class="parse-modal verify-modal" @click.stop>
 				<view class="parse-head verify-head">
@@ -196,7 +188,7 @@
 			</view>
 		</view>
 
-		<!-- ★ 新增：指针链解析结果弹窗 -->
+		<!-- 指针链解析结果弹窗 -->
 		<view v-if="parseModalVisible" class="modal-mask" @click="closeParseModal">
 			<view class="parse-modal" @click.stop>
 				<view class="parse-head">
@@ -252,12 +244,23 @@
 				</scroll-view>
 			</view>
 		</view>
-
+		<!-- 邻近扫描覆盖层 -->
+		<view v-if="nearVisible" class="near-mask">
+			<NearbyScan @back="nearVisible = false" />
+		</view>
 	</view>
 </template>
 
 <script setup>
-import { ref, computed, shallowRef, triggerRef, onMounted, onUnmounted, nextTick } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, triggerRef } from 'vue'
+import { defineAsyncComponent } from 'vue'
+const NearbyScan = defineAsyncComponent(() => import('./utilComponent/NearbyScan.vue'))
+
+// 覆盖层开关
+const nearVisible = ref(false)
+function nearByScan() {
+	nearVisible.value = true
+}
 
 // ============ 响应式 UI 状态 ============
 const dataAddr = ref('')
@@ -274,7 +277,7 @@ const pauseFlag = ref(false)
 
 
 
-// ★ 新增：本地标识 & 校验状态
+// 本地标识 & 校验状态
 const LOCAL_STORAGE_KEY = 'pointer_chain_tags_v1'
 const localModalVisible = ref(false)
 const savedTagList = ref([])          // [{ key, alias, time, chains: [{module, baseOffset, chain}] }]
@@ -290,7 +293,7 @@ const verifyBaseValue = ref('')
 const verifyResults = ref([])
 const verifyOkCount = computed(() => verifyResults.value.filter(r => r.ok).length)
 
-// ★ 新增：主模块过滤 & 解析
+// 主模块过滤 & 解析
 const mainModuleFilter = ref(false)
 const mainModuleName = ref('Sky-iOS-Gold')
 const filteredChains = ref([])
@@ -336,7 +339,7 @@ let logBoxHeight = 200
 
 
 let filteredChainsRaw = []
-// ★★★ 新增：UI 同步器专用非响应式缓冲
+// ★★UI 同步器专用非响应式缓冲
 let logBuf = []                 // 无限日志缓冲，搜索热路径只写这里
 let lastSyncedCount = 0         // 已同步到 allResults 的条数
 let pendingChainCount = 0       // 非响应式计数
@@ -601,7 +604,7 @@ function checkInModule(address, chain) {
 
 
 
-// ★ 新增：查找主模块
+// 查找主模块
 function findMainModule() {
 	const list = modulesCache || loadAllModules()
 	for (let i = 0; i < list.length; i++) {
@@ -616,7 +619,7 @@ function findMainModule() {
 	return null
 }
 
-// ★ 新增：读 64 位指针
+// 读 64 位指针
 function readPtr(addrNum) {
 	try {
 		const v = h5gg.getValue(toHexAddr(addrNum), 'I64')
@@ -624,7 +627,7 @@ function readPtr(addrNum) {
 	} catch (e) { return 0 }
 }
 
-// ★ 新增：构建复制格式 Sky-iOS-Gold+0x529E8D0+0x1300+0x6C44
+// 构建复制格式 Sky-iOS-Gold+0x529E8D0+0x1300+0x6C44
 function buildChainStr(item) {
 	// 模块名 + 小写 0x + 大写十六进制数值
 	const parts = [item.module, '0x' + item.baseOffset.toString(16).toUpperCase()]
@@ -651,7 +654,7 @@ function formatHex(v) {
 
 
 
-// ============ ★ 新增：本地标识管理 ============
+// ============ 本地标识管理 ============
 // 使用流程
 // 保存：搜索 → 打开"仅显示主模块指针链" → 搜索完成 → 点 💾 保存到本地，以输入框地址（如 0x12345678）为 key 存到 localStorage
 
@@ -776,7 +779,7 @@ function onSaveToLocal() {
 	}
 }
 
-// ============ ★ 新增：校验 ============
+// ============ 校验 ============
 function openVerifyModal(tag) {
 	verifyTagKey.value = tag.key
 	verifyTagAlias.value = tag.alias ? `${tag.alias} (${tag.key})` : tag.key
@@ -907,7 +910,7 @@ function toHexAddr(n) {
 	}
 }
 
-// ★ 新增：解析单条链（沿用 ispoint.html 的 getPtr 原理）
+// 解析单条链（沿用 ispoint.html 的 getPtr 原理）
 function parseSingleChain(item) {
 	const result = {
 		broken: false, brokenLevel: 0, brokenAddr: '', finalAddr: '',
@@ -1188,7 +1191,7 @@ function onModuleChange(e) {
 
 
 
-// ★ 新增：切换主模块过滤
+// 切换主模块过滤
 function toggleMainFilter() {
 	mainModuleFilter.value = !mainModuleFilter.value
 	showTip(mainModuleFilter.value
@@ -1196,7 +1199,7 @@ function toggleMainFilter() {
 		: '已关闭主模块过滤：显示全部模块')
 }
 
-// ★ 新增：解析过滤结果
+// 解析过滤结果
 function onParseFiltered() {
 	// ★ 用 raw 确保是最新全量（搜索中 filteredChains.value 落后一帧）
 	const list = filteredChainsRaw.length > filteredChains.value.length
@@ -1405,11 +1408,9 @@ input:focus {
 select.native-select {
 	flex: 1;
 	min-width: 140px;
-	padding: 4px 6px;
 	border: 1px solid #ddd;
 	border-radius: 4px;
 	font-size: 12px;
-	background: #fff;
 	color: #333;
 	height: 26px;
 	box-sizing: border-box;
@@ -1418,10 +1419,8 @@ select.native-select {
 	-webkit-appearance: none;
 	appearance: none;
 	/* 自绘下拉箭头 */
-	background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
-	background-repeat: no-repeat;
-	background-position: right 6px center;
-	padding-right: 22px;
+	background: #fff url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L2 4h8z'/%3E%3C/svg%3E") no-repeat right 6px center;
+	padding: 4px 22px 4px 6px;
 }
 
 select.native-select:focus {
@@ -1472,6 +1471,42 @@ button::after {
 #togglePanel {
 	background: #34c759;
 	color: #fff;
+}
+
+#near {
+	background: #5856d6;
+	color: #fff;
+	padding: 6px;
+	border: none;
+	border-radius: 4px;
+	font-size: 12px;
+	cursor: pointer;
+	touch-action: manipulation;
+	line-height: 1.2;
+	margin: 0;
+	-webkit-tap-highlight-color: transparent;
+}
+
+#near:active {
+	opacity: 0.8;
+}
+
+#near::after {
+	border: none;
+}
+
+.near-mask {
+	position: fixed;
+	inset: 0;
+	z-index: 99999;
+	background: #0b0e14;
+	display: flex;
+	flex-direction: column;
+}
+
+.near-mask>* {
+	flex: 1;
+	min-height: 0;
 }
 
 #gotoWeb {
@@ -1546,7 +1581,7 @@ button[disabled] {
 	font-family: -apple-system, system-ui, sans-serif;
 }
 
-/* ★ 新增：过滤开关 */
+/* 过滤开关 */
 .filter-row {
 	gap: 8px;
 	height: auto;
@@ -1597,7 +1632,7 @@ button[disabled] {
 	font-weight: 600;
 }
 
-/* ★ 新增：解析弹窗 */
+/* 解析弹窗 */
 .modal-mask {
 	position: fixed;
 	inset: 0;
@@ -1866,7 +1901,7 @@ button[disabled] {
 	font-weight: 600;
 }
 
-/* ★ 新增：保存行 */
+/* 保存行 */
 .save-row {
 	display: flex;
 	gap: 6px;
@@ -1894,7 +1929,7 @@ button[disabled] {
 	color: #fff;
 }
 
-/* ★ 新增：本地标识列表 */
+/* 本地标识列表 */
 .local-modal {
 	max-width: 640px;
 }
@@ -1982,7 +2017,7 @@ button[disabled] {
 	color: #bbb;
 }
 
-/* ★ 新增：校验弹窗 */
+/* 校验弹窗 */
 .verify-modal {
 	max-width: 720px;
 }
@@ -2061,7 +2096,7 @@ button[disabled] {
 	font-family: Menlo, monospace;
 }
 
-/* ★ 新增：校验弹窗里的"开始校验"按钮（白底上有颜色） */
+/* 校验弹窗里的"开始校验"按钮（白底上有颜色） */
 .verify-run-btn {
 	padding: 0 14px;
 	height: 28px;

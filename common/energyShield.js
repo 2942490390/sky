@@ -1,6 +1,7 @@
 // common/energyShield.js
 // 能量盾核心逻辑（移植自 HTML 版），支持 8 人 × 3 类独立开关
 import { writeSafe } from './h5gg.js'
+import { setAddr } from './addressRegistry.js'
 // ================= 常量 =================
 const NLD_FEATURE_VALUE = '0.544388'
 const NLD_SEARCH_FROM = '0x130000000'
@@ -80,6 +81,12 @@ export function initEnergyShield() {
             nldSelfList[i] = selfAddr
         }
 
+        setAddr('nldBase', nldBaseAddr, { type: 'BASE' })
+        for (let i = 0; i < NLD_PLAYER_COUNT; i++) {
+            setAddr('nldMain' + i, nldAddrList[i], { type: 'F32' })
+            setAddr('nldOther' + i, nldOtherList[i], { type: 'F32' })
+            setAddr('nldSelf' + i, nldSelfList[i], { type: 'F32' })
+        }
         return true
     } catch (e) {
         return false

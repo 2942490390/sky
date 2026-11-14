@@ -1,5 +1,5 @@
 // common/getMapPoint.js
-import { subMapData } from './warpSpots.js'
+import { subMapData } from './map/warpSpots.js'
 
 // 把 Vue 里用的中文名，映射到 mapIdToName 里的标准中文名
 const zhAlias = {

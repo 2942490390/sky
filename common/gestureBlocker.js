@@ -40,8 +40,8 @@ export function installGestureBlocker(options = {}) {
 		if (isAllowed(e.target)) return
 		const t = e.touches && e.touches[0]
 		if (!t) return
-		const startX = t.clientX
-		const startY = t.clientY
+		// const startX = t.clientX
+		// const startY = t.clientY
 
 		longPressTimer = setTimeout(() => {
 			longPressTimer = null

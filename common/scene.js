@@ -1,5 +1,5 @@
 // common/scene.js
-
+import { setAddr } from './addressRegistry.js'
 // ================= 场景亮度地址搜索 =================
 
 // 搜索常量
@@ -127,11 +127,7 @@ export async function setSceneBrightness(value) {
 	if (!sceneBrightnessAddr) {
 		sceneBrightnessAddr = await findSceneBrightnessAddr()
 		if (sceneBrightnessAddr) {
-			uni.showToast({
-				icon: 'none',
-				title: '亮度地址 0x' + sceneBrightnessAddr.toString(16),
-				duration: 1200
-			})
+			setAddr('sceneBright', sceneBrightnessAddr, { type: 'F32' })
 		}
 	}
 	if (!sceneBrightnessAddr) {
@@ -174,11 +170,7 @@ export async function sceneBrightnessLoop(enabled, value, interval = 100) {
 	if (!sceneBrightnessAddr) {
 		sceneBrightnessAddr = await findSceneBrightnessAddr()
 		if (sceneBrightnessAddr) {
-			uni.showToast({
-				icon: 'none',
-				title: '亮度地址 0x' + sceneBrightnessAddr.toString(16),
-				duration: 1200
-			})
+			setAddr('sceneBright', sceneBrightnessAddr, { type: 'F32' })
 		}
 	}
 	if (!sceneBrightnessAddr) {
@@ -192,7 +184,7 @@ export async function sceneBrightnessLoop(enabled, value, interval = 100) {
 
 	try {
 		h5gg.setValue('0x' + sceneBrightnessAddr.toString(16), currentBrightness, 'F32')
-	} catch (e) {}
+	} catch (e) { }
 
 	brightnessTimer = setTimeout(() => sceneBrightnessLoop(true, currentBrightness, interval), interval)
 }

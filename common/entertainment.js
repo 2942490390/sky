@@ -1,11 +1,14 @@
 // common/entertainment.js
 // 娱乐功能独立模块（从 demo10 移植，统一用递归 setTimeout 防止崩溃）
 // 依赖：h5gg.js 的 getPtr / getModuleAddr
+//      addressRegistry.js 的 setAddr（把地址上报给开发者页面）
 
 import {
 	getPtr,
 	getModuleAddr
 } from './h5gg.js'
+
+import { setAddr } from './addressRegistry.js'
 
 // ============================================================
 // 内部工具
@@ -38,7 +41,7 @@ function toast(msg) {
 			title: String(msg),
 			duration: 1500
 		})
-	} catch (e) {}
+	} catch (e) { }
 }
 
 // ============================================================
@@ -47,15 +50,17 @@ function toast(msg) {
 //  - 递归 setTimeout（不用 setInterval，杜绝回调堆积）
 //  - 每轮都校验地址是否有效，失效自动停止
 //  - stop() 可随时安全停止
-//  - 支持两种取址方式：
-//      key     → 走 getPtr（offsets.config.js 指针链）
+//  - 支持三种取址方式：
+//      key     → 走 getPtr（offsets.config.js 指针链，自动 setAddr）
 //      addrFn  → 自定义（如 getModuleAddr 直接地址），优先于 key
+//      setKey  → addrFn 拿到地址后，自动 setAddr 上报给开发者页面
 // ============================================================
 
 /**
  * @param {object} opts
- * @param {string}   [opts.key]      offsets.config.js 里的 key（走 getPtr）
+ * @param {string}   [opts.key]      offsets.config.js 里的 key（走 getPtr，自动 setAddr）
  * @param {function} [opts.addrFn]   自定义地址函数（优先于 key），返回 number 或 Promise<number>
+ * @param {string}   [opts.setKey]   addrFn 成功后，用此 key 调 setAddr 上报地址
  * @param {number}   opts.value      写入值
  * @param {string}   opts.type       写入类型 'I32' | 'F32'
  * @param {number}   [opts.interval] 循环间隔 ms（默认 100）
@@ -66,6 +71,7 @@ function createWriteLoop(opts) {
 	const {
 		key,
 		addrFn,
+		setKey,
 		value,
 		type,
 		interval = 100,
@@ -86,7 +92,7 @@ function createWriteLoop(opts) {
 			if (key) {
 				return toAddrNum(await getPtr(key))
 			}
-		} catch (e) {}
+		} catch (e) { }
 		return 0
 	}
 
@@ -109,6 +115,11 @@ function createWriteLoop(opts) {
 				return
 			}
 			failCount = 0
+
+			// ★ addrFn 路径才需要手动 setAddr（getPtr 路径内部已注册）
+			if (setKey && typeof addrFn === 'function') {
+				setAddr(setKey, addr, { type })
+			}
 		}
 
 		if (addr) {
@@ -144,13 +155,14 @@ function createWriteLoop(opts) {
 // 通用分片批写控制器（类似已有 burnLoop / bloomLoop）
 //  - 每 tick 写一片，避免一次性写大量内存卡死
 //  - 一轮写完后回到 0 重新循环
-//  - 支持 key / addrFn 两种取址方式
+//  - 支持 key / addrFn 两种取址方式，setKey 可上报地址
 // ============================================================
 
 /**
  * @param {object} opts
  * @param {string}   [opts.key]      offsets.config.js 里的 key
  * @param {function} [opts.addrFn]   自定义地址函数（优先于 key）
+ * @param {string}   [opts.setKey]   addrFn 成功后，用此 key 调 setAddr 上报地址
  * @param {number}   opts.value      写入值
  * @param {string}   opts.type       写入类型
  * @param {number}   opts.total      项数
@@ -163,6 +175,7 @@ function createBatchLoop(opts) {
 	const {
 		key,
 		addrFn,
+		setKey,
 		value,
 		type,
 		total,
@@ -186,7 +199,7 @@ function createBatchLoop(opts) {
 			if (key) {
 				return toAddrNum(await getPtr(key))
 			}
-		} catch (e) {}
+		} catch (e) { }
 		return 0
 	}
 
@@ -207,6 +220,11 @@ function createBatchLoop(opts) {
 			}
 			failCount = 0
 			index = 0
+
+			// ★ addrFn 路径才需要手动 setAddr
+			if (setKey && typeof addrFn === 'function') {
+				setAddr(setKey, addr, { type })
+			}
 		}
 
 		const start = index
@@ -249,6 +267,7 @@ function createBatchLoop(opts) {
 
 // ---------- 无限能量（F32=14，循环） ----------
 // 注意：你项目已有 energyLoop 写 99，如果优先使用本模块，请勿同时开
+// 走 key → getPtrSync 内部已 setAddr('energy', ...)，无需 setKey
 const _energy = createWriteLoop({
 	key: 'energy',
 	value: 14,
@@ -266,6 +285,7 @@ export function stopEnergyLoopV2() {
 }
 
 // ---------- 隐身（F32=0）—— 指针链 ----------
+// 走 key → 内部已 setAddr('ysaring', ...)
 const _invisible = createWriteLoop({
 	key: 'ysaring',
 	value: 0,
@@ -282,6 +302,7 @@ export function stopInvisibleLoop() {
 }
 
 // ---------- 守护无翼（I32=0）—— 指针链 ----------
+// 走 key → 内部已 setAddr('noWingGuard', ...)
 const _noWing = createWriteLoop({
 	key: 'noWingGuard',
 	value: 0,
@@ -298,8 +319,10 @@ export function stopNoWingGuardLoop() {
 }
 
 // ---------- 无视冥龙（I32=0）—— dj() 直接地址 ----------
+// 走 addrFn → 需要 setKey 上报到开发者页面
 const _krill = createWriteLoop({
 	addrFn: () => getModuleAddr(0x54BB8F8),
+	setKey: 'krill',                    // ★ 新增
 	value: 0,
 	type: 'I32',
 	interval: 100,
@@ -316,6 +339,7 @@ export function stopIgnoreKrillLoop() {
 // ---------- 防举报（I32=257）—— dj() 直接地址 ----------
 const _antiReport = createWriteLoop({
 	addrFn: () => getModuleAddr(0x50453DC),
+	setKey: 'antiReport',               // ★ 新增
 	value: 257,
 	type: 'I32',
 	interval: 100,
@@ -332,6 +356,7 @@ export function stopAntiReportLoop() {
 // ---------- 解锁好友树（I32=256）—— dj() 直接地址 ----------
 const _friendTree = createWriteLoop({
 	addrFn: () => getModuleAddr(0x532F3D0),
+	setKey: 'friendTree',               // ★ 新增
 	value: 256,
 	type: 'I32',
 	interval: 100,
@@ -346,6 +371,7 @@ export function stopFriendTreeLoop() {
 }
 
 // ---------- 燃烧弹（1591 项 × 464 字节，每项 F32=1）—— 指针链 ----------
+// 走 key → 内部已 setAddr('autoIgnite', ...)
 const _ignite = createBatchLoop({
 	key: 'autoIgnite',
 	value: 1,
@@ -365,6 +391,7 @@ export function stopIgniteLoop() {
 }
 
 // ---------- 去风墙（60 项 × 2096 字节，每项 F32=0）—— 指针链 ----------
+// 走 key → 内部已 setAddr('fq', ...)
 const _wall = createBatchLoop({
 	key: 'fq',
 	value: 0,
@@ -390,17 +417,13 @@ export async function setSkipAnim(on) {
 		toast('跳过动画：地址未找到')
 		return false
 	}
+	// ★ 手动上报地址（一次性功能，不走循环）
+	setAddr('skipAnim', addr, { type: 'I32', value: on ? 1 : 0 })
 	return safeWrite(addr, on ? 1 : 0, 'I32')
 }
 
 // ---------- 无限烟花（一次性写三处） ----------
-// demo10:
-//   Write_4(A_(A.outfit, 0x20), -1014213802)   // outfit + 0x20
-//   Write_4(A.wxyha, 5000)                     // wxyha
-//   Write_4(A_(A.wxyha, 4), 5000)              // wxyha + 4
-// 注意：A.wxyha 是"指针解出来的对象"，A_(A.wxyha, 4) = *(A.wxyha) + 4？不是！
-// 看 demo10 的 A_：A_(addr, off) = _num(Number(addr) + Number(off))
-// 所以 A_(A.wxyha, 4) = A.wxyha + 4（直接加，不解引用）
+// 走 getPtr → 内部已 setAddr('outfit' / 'wxyha', ...)
 export async function fireworkV2() {
 	const outfit = toAddrNum(await getPtr('outfit'))
 	const wxyha = toAddrNum(await getPtr('wxyha'))
@@ -417,13 +440,8 @@ export async function fireworkV2() {
 	return true
 }
 
-
-
-
-
-
-
 // ---------- 全局离线（双阶段，offline 用指针链） ----------
+// 走 getPtr → 内部已 setAddr('offline', ...)
 let _offlineAddr = 0
 let _offlineTimer = null
 let _offlineOn = false
@@ -471,11 +489,6 @@ export function stopGlobalOffline() {
 	}
 	_offlineOn = false
 }
-
-
-
-
-
 
 // ============================================================
 // 全局停止（页面卸载时统一调用）

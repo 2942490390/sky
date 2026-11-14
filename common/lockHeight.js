@@ -1,5 +1,6 @@
 // common/lockHeight.js
 // 锁定高度（复用 coordRunner 的坐标读写）
+import { setAddr } from './addressRegistry.js'
 
 import { getPtr } from './h5gg.js'
 
@@ -16,6 +17,7 @@ async function getHeightAddr() {
     const addr = await getPtr('rwdz')
     if (!addr || addr <= 0) return null
     lockAddr = addr + 8   // ★ Y 轴偏移 +8
+    setAddr('lockHeight', lockAddr, { type: 'F32', note: 'rwdz + 8' })
     return lockAddr
 }
 

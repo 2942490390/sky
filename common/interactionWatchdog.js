@@ -12,23 +12,23 @@ function getInteractionDiagnostics() {
 			const arr = JSON.parse(raw)
 			if (Array.isArray(arr)) return arr
 		}
-	} catch (e) {}
+	} catch (e) { }
 	return []
 }
 
 function persist(events) {
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(events.slice(-MAX_EVENTS)))
-	} catch (e) {}
+	} catch (e) { }
 }
 
 function clearInteractionDiagnostics() {
 	try {
 		localStorage.removeItem(STORAGE_KEY)
-	} catch (e) {}
+	} catch (e) { }
 	try {
 		window.__SKY_INTERACTION_DIAGNOSTICS__ = []
-	} catch (e) {}
+	} catch (e) { }
 }
 
 function getInteractiveTarget(el) {
@@ -47,7 +47,7 @@ function getDiagnostics(event, target) {
 	let elementAtPoint = null
 	try {
 		elementAtPoint = document.elementFromPoint(clientX, clientY)
-	} catch (e) {}
+	} catch (e) { }
 
 	const describe = (el) => {
 		if (!el) return null
@@ -80,7 +80,7 @@ function getDiagnostics(event, target) {
 
 export function installInteractionWatchdog(onRepair) {
 	if (typeof document === 'undefined' || typeof window === 'undefined') {
-		return () => {}
+		return () => { }
 	}
 
 	const events = getInteractionDiagnostics()
@@ -99,7 +99,7 @@ export function installInteractionWatchdog(onRepair) {
 		persist(events)
 		try {
 			window.__SKY_INTERACTION_DIAGNOSTICS__ = events.slice(-MAX_EVENTS)
-		} catch (e) {}
+		} catch (e) { }
 	}
 
 	const clearPending = () => {
@@ -170,7 +170,7 @@ export function installInteractionWatchdog(onRepair) {
 	try {
 		window.__SKY_INTERACTION_DIAGNOSTICS__ = events.slice(-MAX_EVENTS)
 		window.__SKY_CLEAR_INTERACTION_DIAGNOSTICS__ = clearInteractionDiagnostics
-	} catch (e) {}
+	} catch (e) { }
 
 	return () => {
 		clearPending()

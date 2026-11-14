@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="0e6ce289-e496-4a25-bc0e-7c1032e1ad4f" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/App.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/coordRunner.js" beforeDir="false" afterPath="$PROJECT_DIR$/common/coordRunner.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/energyShield.js" beforeDir="false" afterPath="$PROJECT_DIR$/common/energyShield.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/entertainment.js" beforeDir="false" afterPath="$PROJECT_DIR$/common/entertainment.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/gestureBlocker.js" beforeDir="false" afterPath="$PROJECT_DIR$/common/gestureBlocker.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/getMapPoint.js" beforeDir="false" afterPath="$PROJECT_DIR$/common/getMapPoint.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/h5gg.js" beforeDir="false" afterPath="$PROJECT_DIR$/common/h5gg.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/interactionWatchdog.js" beforeDir="false" afterPath="$PROJECT_DIR$/common/interactionWatchdog.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/lockHeight.js" beforeDir="false" afterPath="$PROJECT_DIR$/common/lockHeight.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/magic.js" beforeDir="false" afterPath="$PROJECT_DIR$/common/magic.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/offsets.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/common/offsets.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/packetSender.js" beforeDir="false" afterPath="$PROJECT_DIR$/common/packetSender.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/scene.js" beforeDir="false" afterPath="$PROJECT_DIR$/common/scene.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/tapOnly.js" beforeDir="false" afterPath="$PROJECT_DIR$/common/tapOnly.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/warpSpots.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/NavBar.vue" beforeDir="false" afterPath="$PROJECT_DIR$/components/NavBar.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/PageChuanSong.vue" beforeDir="false" afterPath="$PROJECT_DIR$/components/PageChuanSong.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/PageDaiRen.vue" beforeDir="false" afterPath="$PROJECT_DIR$/components/PageDaiRen.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/PageHome.vue" beforeDir="false" afterPath="$PROJECT_DIR$/components/PageHome.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/PageSettings.vue" beforeDir="false" afterPath="$PROJECT_DIR$/components/PageSettings.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/PageShiYong.vue" beforeDir="false" afterPath="$PROJECT_DIR$/components/PageShiYong.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/PageYuLe.vue" beforeDir="false" afterPath="$PROJECT_DIR$/components/PageYuLe.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/PageYuanDi.vue" beforeDir="false" afterPath="$PROJECT_DIR$/components/PageYuanDi.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/PointerChainSearch.vue" beforeDir="false" afterPath="$PROJECT_DIR$/components/PointerChainSearch.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/PromptDialog.vue" beforeDir="false" afterPath="$PROJECT_DIR$/components/PromptDialog.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/manifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/manifest.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/index/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/pages/index/index.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/unpackage/dist/build/web/assets/pages-index-index.vIoCw2LN.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/unpackage/dist/build/web/css/style.BFTMyBh1.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/unpackage/dist/build/web/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/unpackage/dist/build/web/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/unpackage/dist/build/web/js/index.CJvm3BLy.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/unpackage/dist/cache/.vite/deps/_metadata.json" beforeDir="false" afterPath="$PROJECT_DIR$/unpackage/dist/cache/.vite/deps/_metadata.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/toast.js" beforeDir="false" afterPath="$PROJECT_DIR$/utils/toast.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/usePrompt.js" beforeDir="false" afterPath="$PROJECT_DIR$/utils/usePrompt.js" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2
+}</component>
+  <component name="ProjectId" id="3M5dGL7L45FBcFHxN2IwDpoy4QK" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/草莓果冻左左/Desktop/GoBa Pro/project/sky&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;D:\\IntelliJ IDEA 2024.1.3\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9f38398b9061-39b83d9b5494-intellij.indexing.shared.core-IU-241.17890.1" />
+        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-IU-241.17890.1" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="应用程序级" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="0e6ce289-e496-4a25-bc0e-7c1032e1ad4f" name="更改" comment="" />
+      <created>1794644266274</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1794644266274</updated>
+      <workItem from="1794644267393" duration="739000" />
+      <workItem from="1794645038178" duration="2393000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="javascript">
+          <url>file://$PROJECT_DIR$/common/entertainment.js</url>
+          <line>214</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>

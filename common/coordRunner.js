@@ -6,11 +6,12 @@ import {
 import {
 	AUTO_RUN_POINTS
 } from './autoRunPoints.js'
+import { setAddr, invalidateAddr } from './addressRegistry.js'
 
 // ================= 缓存状态 =================
 let coordTimer = null
 let coordCallback = null
-let coordLoopRunning = false // ★ 新增：循环运行标志
+let coordLoopRunning = false // 循环运行标志
 
 let cachedXAddr = 0 // x 的地址（z = +4, y = +8）
 let cachedFlagAddr = 0 // 特征值地址
@@ -21,8 +22,15 @@ export function invalidateRwdzCache() {
 	cachedXAddr = 0
 	cachedFlagAddr = 0
 	cachedKey35Addr = 0
+	invalidateAddr('coordX'); invalidateAddr('coordZ'); invalidateAddr('coordY')
 }
-
+function registerCoordAddrs(xAddr, flagAddr) {
+	setAddr('rwdz', xAddr, { type: 'BASE' })
+	setAddr('coordX', xAddr, { type: 'F32' })
+	setAddr('coordZ', xAddr + 4, { type: 'F32' })
+	setAddr('coordY', xAddr + 8, { type: 'F32' })
+	setAddr('flagAddr', flagAddr, { type: 'HEX', value: readHexU32(flagAddr) })
+}
 // ================= 缓存有效性校验 =================
 // 用缓存的地址读一次，校验特征值是否还对，对就返回坐标，否则返回 null
 function readFromCache() {
@@ -37,7 +45,11 @@ function readFromCache() {
 		const x = Number(h5gg.getValue('0x' + cachedXAddr.toString(16), 'F32'))
 		const z = Number(h5gg.getValue('0x' + (cachedXAddr + 4).toString(16), 'F32'))
 		const y = Number(h5gg.getValue('0x' + (cachedXAddr + 8).toString(16), 'F32'))
+
+
 		if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(y)) return null
+
+		registerCoordAddrs(cachedXAddr, cachedFlagAddr)
 		return {
 			x,
 			z,
@@ -62,12 +74,14 @@ async function readByPtrAndCache() {
 		const x = Number(h5gg.getValue('0x' + xAddr.toString(16), 'F32'))
 		const z = Number(h5gg.getValue('0x' + (xAddr + 4).toString(16), 'F32'))
 		const y = Number(h5gg.getValue('0x' + (xAddr + 8).toString(16), 'F32'))
+
 		if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(y)) return null
 
 		// ★ 回灌缓存，后续直接用 cachedXAddr
 		cachedXAddr = xAddr
 		cachedFlagAddr = xAddr + 148
 		cachedKey35Addr = xAddr - 40
+		registerCoordAddrs(cachedXAddr, cachedFlagAddr)
 		return {
 			x,
 			z,
@@ -201,7 +215,7 @@ export async function startAutoRun(opts = {}) {
 					stopAutoRun()
 					try {
 						onFinish && onFinish()
-					} catch (e) {}
+					} catch (e) { }
 					return
 				}
 				const p = AUTO_RUN_POINTS[autoRunIndex]
@@ -209,7 +223,7 @@ export async function startAutoRun(opts = {}) {
 				if (!autoRunRunning) return
 				try {
 					onStep && onStep(autoRunIndex, AUTO_RUN_POINTS.length)
-				} catch (e) {}
+				} catch (e) { }
 				autoRunIndex++
 			} catch (e) {
 				console.error('[coordRunner] step 异常:', e)
