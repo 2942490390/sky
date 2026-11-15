@@ -15,6 +15,7 @@ export default {
 	wxyh: [0x48cb7f0, [0xd8, 0x4b14]], // 烟花
 	wxmf: [0x54A38B8, [0xC70, 0x1B90, 0x49F4]], // 魔法
 	bigjump: [0x44EE578, [0x7FD4]], // 大跳
+	insituWing: [0x488D7B0, [0x7C00, 0x83C8, 0xA0]], // 原地光翼
 
 
 	// ===== 相对 playerCoord（用你项目已有 energy 的前缀）=====

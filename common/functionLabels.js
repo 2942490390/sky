@@ -22,6 +22,7 @@ export const FUNCTION_LABELS = {
 	noWingGuard: '守护无翼',
 	autoIgnite: '燃烧弹',
 	offline: '全局离线',
+	insituWing: '原地光翼',
 }
 
 /**

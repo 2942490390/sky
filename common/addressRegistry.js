@@ -35,6 +35,7 @@ export const ADDR_META = {
     gysl: { label: '光翼数量', group: 'movement', type: 'I32', desc: '指针链 gysl' },
     zy: { label: '炸翼', group: 'movement', type: 'I32', desc: '指针链 zy' },
     lockHeight: { label: '锁定高度', group: 'movement', type: 'F32', desc: 'rwdz + 8' },
+    insituWing: { label: '原地光翼地址', group: 'movement', type: 'BASE', desc: '指针链 insituWing' },
 
     // --- 能量/魔法 ---
     energy: { label: '无限能量', group: 'energy', type: 'F32', desc: '指针链 energy' },

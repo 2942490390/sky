@@ -16,8 +16,8 @@
 			</view>
 
 			<!-- 配置列表 -->
-			<scroll-view class="list" scroll-y :scroll-top="scrollTop" :scroll-with-animation="true" @scroll="onScroll"
-				:style="{ height: listHeight + 'px' }">
+			<scroll-view ref="listRef" class="list" scroll-y :scroll-top="scrollTop" :scroll-with-animation="true"
+				@scroll="onScroll" :style="{ height: listHeight + 'px' }">
 				<view ref="listContentRef" class="list-content">
 					<view v-for="(item, idx) in list" :key="item.id" class="card"
 						:class="{ 'card-active': idx === highlightIndex }">
@@ -252,14 +252,21 @@ async function scrollToIndex(idx) {
 	}, 350)
 }
 
+const listRef = ref(null)
+
 function safeSetScrollTop(v) {
 	if (!Number.isFinite(v)) return
 	if (scrollTop.value === v) return
-	try {
-		scrollTop.value = v
-	} catch (e) {
-		// scroll-view 内部 main.value 未就绪，忽略
-	}
+
+	// 1. 依然修改绑定的值（为了保持状态同步）
+	scrollTop.value = v
+
+	// 2. 直接操作组件实例，避免框架底层 null 报错
+	nextTick(() => {
+		if (listRef.value && listRef.value.$el) {
+			listRef.value.$el.scrollTop = v
+		}
+	})
 }
 
 function onInputFocus(idx) {
@@ -529,6 +536,10 @@ onUnmounted(() => {
 	if (focusScrollTimer) {
 		clearTimeout(focusScrollTimer)
 		focusScrollTimer = null
+	}
+	if (scrollFinalizeTimer) {
+		clearTimeout(scrollFinalizeTimer)
+		scrollFinalizeTimer = null
 	}
 	if (scrollFinalizeTimer) {
 		clearTimeout(scrollFinalizeTimer)

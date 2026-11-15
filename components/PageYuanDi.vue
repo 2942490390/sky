@@ -53,45 +53,75 @@
 </template>
 
 <script setup>
-// ===== iOS Safari 触摸事件处理 =====
-let touchStartTime = 0
+import { startInPlaceWing, stopInPlaceWing, isInPlaceWingRunning } from '@/common/in-place/inPlaceWing.js'
 
-// 阻止默认触摸行为，避免Safari的默认行为干扰
+// ===== 触摸处理 =====
 function preventTouch(e) {
 	e.stopPropagation()
 }
 
-// ===== 原样保留的方法 =====
-function mrrw() {
-	console.log('mrrw')
-}
+function mrrw() { console.log('mrrw') }
+function qtpt() { console.log('qtpt') }
+function ydrl() { console.log('ydrl') }
+function hddb() { console.log('hddb') }
+function ydxg() { console.log('ydxg') }
 
-function qtpt() {
-	console.log('qtpt')
-}
-
-function ydrl() {
-	console.log('ydrl')
-}
-
-function hddb() {
-	console.log('hddb')
-}
-
-function ydxg() {
-	console.log('ydxg')
-}
-
+// ===== 原地光翼 =====
 function ydgy() {
-	console.log('ydgy')
+	// 正在跑 → 询问是否停止
+	if (isInPlaceWingRunning()) {
+		uni.showModal({
+			title: '原地光翼运行中',
+			content: '是否停止当前任务？',
+			confirmText: '停止',
+			cancelText: '继续',
+			success: (res) => {
+				if (res.confirm) {
+					stopInPlaceWing()
+					uni.showToast({ icon: 'none', title: '已停止原地光翼' })
+				}
+			}
+		})
+		return
+	}
+
+	// 未运行 → 输入间隔
+	uni.showModal({
+		title: '原地光翼',
+		editable: true,
+		placeholderText: '默认50秒，可填5',
+		content: '50',
+		success: async (res) => {
+			if (!res.confirm) return
+
+			const raw = (res.content || '').trim()
+			const delaySec = raw !== '' && Number(raw) > 0 ? Number(raw) : 50
+
+			uni.showToast({ icon: 'none', title: `开始，间隔 ${delaySec} 秒`, duration: 1200 })
+
+			const result = await startInPlaceWing({
+				delaySec,
+				onProgress: (msg) => {
+					uni.showToast({ icon: 'none', title: msg, duration: 800 })
+				}
+			})
+
+			if (result.ok) {
+				uni.showToast({ icon: 'success', title: `完成 ${result.written}/${result.total}` })
+			} else if (result.reason === 'cancelled') {
+				uni.showToast({ icon: 'none', title: `已停止 ${result.written}/${result.total}` })
+			} else if (result.reason === 'ptr-failed') {
+				uni.showToast({ icon: 'none', title: '指针链获取失败' })
+			} else if (result.reason === 'already-running') {
+				uni.showToast({ icon: 'none', title: '已在运行中' })
+			}
+		}
+	})
 }
 
 function jjrw() {
 	h5gg.searchNumber('27491', 'I32', '0x110000000', '0x200000000');
 	h5gg.editAll('0', 'I32');
-	uni.showToast({
-		icon: 'none',
-		title: '快去领取'
-	})
+	uni.showToast({ icon: 'none', title: '快去领取' })
 }
 </script>
