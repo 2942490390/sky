@@ -9,6 +9,7 @@ export const subMapData = {
 		spots: [
 			{ name: "遇境", warpId: "CandleSpace", anyDoorCode: "CandleSpace" },
 			{ name: "云巢", warpId: "MainStreet", anyDoorCode: "MainStreet" },
+			{ name: "故事空间", warpId: "MainStreet_StorySpace", anyDoorCode: "MainStreet_StorySpace" },
 			{ name: "飞行指引", warpId: "MainStreetFlyingIntro", anyDoorCode: "MainStreetFlyingIntro" },
 			{ name: "筑巢工坊-服装", warpId: "MainStreet_ShopOutfits", anyDoorCode: "MainStreet_ShopOutfits" },
 			{ name: "筑巢工坊-魔法", warpId: "MainStreet_ShopSpells", anyDoorCode: "MainStreet_ShopSpells" },
@@ -20,9 +21,10 @@ export const subMapData = {
 			{ name: "仙境茶会", warpId: "MainStreet_Cafe_Wonderland", anyDoorCode: "MainStreet_Cafe_Wonderland" },
 			{ name: "AR卧室", warpId: "AR_Bedroom", anyDoorCode: "AR_Bedroom" },
 			{ name: "AR麦田", warpId: "AR_WheatField", anyDoorCode: "AR_WheatField" },
+			{ name: "法国，阿尔勒小屋", warpId: "Nest_Night_GO_Town", anyDoorCode: "Nest_Night_GO_Town" },
 			{ name: "AR测试关卡", warpId: "AR_TestLevel", anyDoorCode: "AR_TestLevel" },
+			{ name: "地下办公室", warpId: "UndergroundOffice", anyDoorCode: "UndergroundOffice" },
 			{ name: "狂欢季", warpId: "MainStreet_FunArmada", anyDoorCode: "MainStreet_FunArmada" },
-
 		]
 	},
 	chendao: {
@@ -83,7 +85,8 @@ export const subMapData = {
 			{ name: "欧诺拉-鸟", warpId: "Event_Arr_TheSeed", anyDoorCode: "Event_Arr_TheSeed" },
 			{ name: "欧诺拉-蝴蝶", warpId: "Event_Arr_EyesOfAChild", anyDoorCode: "Event_Arr_EyesOfAChild" },
 			{ name: "欧诺拉-被淹没的世界", warpId: "Event_Arr_ExhaleInhale", anyDoorCode: "Event_Arr_ExhaleInhale" },
-			{ name: "嘉年华影院", warpId: "Event_Cinema", anyDoorCode: "Event_Cinema" }
+			{ name: "嘉年华影院", warpId: "Event_Cinema", anyDoorCode: "Event_Cinema" },
+			{ name: "躲猫猫水晶城", warpId: "Event_HidenSeek_SnowVillage", anyDoorCode: "Event_HidenSeek_SnowVillage" },
 		]
 	},
 	mutu: {
@@ -94,6 +97,7 @@ export const subMapData = {
 			{ name: "任天堂遇境", warpId: "Nintendo_CandleSpace", anyDoorCode: "Nintendo_CandleSpace" },
 			{ name: "MBTI 性格测验", warpId: "Event_Personality", anyDoorCode: "Event_Personality" },
 			{ name: "珍珠村", warpId: "Dusk_PearlIsland", anyDoorCode: "Dusk_PearlIsland" },
+			{ name: "珍珠湖", warpId: "Dusk_PearlSea", anyDoorCode: "Dusk_PearlSea" },
 			{ name: "藏宝岛礁", warpId: "Dusk_Triangle", anyDoorCode: "Dusk_Triangle" },
 			{ name: "藏宝岛礁海底", warpId: "Dusk_TriangleEnd", anyDoorCode: "Dusk_TriangleEnd" },
 			{ name: "失落方舟", warpId: "DuskOasis", anyDoorCode: "DuskOasis" },
@@ -105,7 +109,7 @@ export const subMapData = {
 			{ name: "荒废神殿", warpId: "Dusk_HiddenTemple", anyDoorCode: "Dusk_HiddenTemple" },
 			{ name: "暮土神殿", warpId: "DuskEnd", anyDoorCode: "DuskEnd" },
 			{ name: "暮土神殿-往昔", warpId: "DuskEnd_Past", anyDoorCode: "DuskEnd_Past" },
-			{ name: "冥龙之夜", warpId: "Event_WerewolfGame", anyDoorCode: "Event_WerewolfGame" }
+			{ name: "冥龙之夜", warpId: "Event_WerewolfGame", anyDoorCode: "Event_WerewolfGame" },
 		]
 	},
 	jinge: {
@@ -158,8 +162,8 @@ export const subMapData = {
 			{ name: "星光大道", warpId: "CandleSpaceEnd", anyDoorCode: "CandleSpaceEnd" },
 			{ name: "结尾动画", warpId: "Credits", anyDoorCode: "Credits" },
 			{ name: "远古记忆", warpId: "StormEvent_VoidSpace", anyDoorCode: "StormEvent_VoidSpace" },
+			{ name: "AR 相机测试图", warpId: "AR_TestLevel", anyDoorCode: "AR_TestLevel" },
 			{ name: "空世界", warpId: "WorldEmpty", anyDoorCode: null },
-			{ name: "AR 相机测试图", warpId: "AR_Testlevel", anyDoorCode: null },
 		]
 	}
 }
