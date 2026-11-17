@@ -220,7 +220,7 @@ export function stopBloomLoop() {
 let xihuoTimer = null
 let xihuoRunning = false
 
-async function xihuoOnce() {
+export async function xihuoOnce() {
     if (typeof h5gg === 'undefined' || typeof h5gg.searchNumber !== 'function') {
         return false
     }
@@ -282,10 +282,6 @@ export function stopXihuoLoop() {
         xihuoTimer = null
     }
     xihuoRunning = false
-}
-
-export async function xihuoOnceManual() {
-    return xihuoOnce()
 }
 
 // ================= 隐藏蜡烛 =================

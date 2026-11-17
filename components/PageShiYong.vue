@@ -99,7 +99,7 @@
 		<view class="sky-task">
 			<view class="task-left">
 				<text class="fa-solid fa-lock"></text>
-				<text>锁定高度</text>
+				<text>高度锁定</text>
 			</view>
 			<button class="sky-btn" @tap="toggleLockHeight">
 				{{ lockHeightLabel }}
@@ -122,7 +122,7 @@ import {
 	stopEnergyLoop,
 	stopSpeedLoop,
 	stopXihuoLoop,
-	xihuoOnceManual
+	xihuoOnce
 } from '@/common/h5gg.js'
 
 import {
@@ -238,7 +238,7 @@ function wxnl(e) {
 // ===== 吸火 =====
 function xihuo(e) {
 	// swState.xihuo = e.detail.value
-	const res = xihuoOnceManual()
+	const res = xihuoOnce()
 	if (res) {
 		uni.showToast({
 			icon: 'none',
