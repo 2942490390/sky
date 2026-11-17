@@ -77,11 +77,11 @@
 			<switch :checked="swState.bloom" color="#FFD966" style="transform: scale(0.75)" @change="onBloomChange" />
 		</view>
 
-		<!-- 吸火吸花 -->
+		<!-- 吸收烛火 -->
 		<view class="sky-task">
 			<view class="task-left">
 				<text class="fa-solid fa-fire-flame-curved"></text>
-				<text>吸火吸花</text>
+				<text>吸收烛火</text>
 			</view>
 			<switch :checked="swState.xihuo" color="#FFD966" style="transform: scale(0.75)" @change="xihuo" />
 		</view>
@@ -108,35 +108,35 @@
 	</view>
 </template>
 <script setup>
-import {onUnmounted, reactive, ref} from 'vue'
-import {usePrompt} from '@/utils/usePrompt.js'
+import { onUnmounted, reactive, ref } from 'vue'
+import { usePrompt } from '@/utils/usePrompt.js'
 import {
-  bloomLoop,
-  burnLoop,
-  clearCandleAddr,
-  energyLoop,
-  setCandleVisibility,
-  speedLoop,
-  stopBloomLoop,
-  stopBurnLoop,
-  stopEnergyLoop,
-  stopSpeedLoop,
-  stopXihuoLoop,
-  xihuoOnceManual
+	bloomLoop,
+	burnLoop,
+	clearCandleAddr,
+	energyLoop,
+	setCandleVisibility,
+	speedLoop,
+	stopBloomLoop,
+	stopBurnLoop,
+	stopEnergyLoop,
+	stopSpeedLoop,
+	stopXihuoLoop,
+	xihuoOnceManual
 } from '@/common/h5gg.js'
 
 import {
-  getAutoRunProgress,
-  isAutoRunRunning,
-  resetAutoRunIndex,
-  setCoordAxis,
-  startAutoRun,
-  startCoordLoop,
-  stopAutoRun as stopAutoRunFn,
-  stopCoordLoop
+	getAutoRunProgress,
+	isAutoRunRunning,
+	resetAutoRunIndex,
+	setCoordAxis,
+	startAutoRun,
+	startCoordLoop,
+	stopAutoRun as stopAutoRunFn,
+	stopCoordLoop
 } from '@/common/coordRunner.js'
 
-import {clearLockHeightAddr, isLockHeightRunning, startLockHeight, stopLockHeight} from '@/common/lockHeight.js'
+import { clearLockHeightAddr, isLockHeightRunning, startLockHeight, stopLockHeight } from '@/common/lockHeight.js'
 
 // ===== 开关状态 =====
 const swState = reactive({
@@ -235,11 +235,25 @@ function wxnl(e) {
 	energyLoop(checked)
 }
 
-// ===== 吸火吸花 =====
+// ===== 吸火 =====
 function xihuo(e) {
-  swState.xihuo = e.detail.value
-	xihuoOnceManual()
+	// swState.xihuo = e.detail.value
+	const res = xihuoOnceManual()
+	if (res) {
+		uni.showToast({
+			icon: 'none',
+			title: '已吸取当前地图烛火'
+		})
+		swState.xihuo = true
+	} else {
+		uni.showToast({
+			icon: 'none',
+			title: '附近没有可吸取的烛火'
+		})
+		swState.xihuo = false
+	}
 }
+
 
 // ===== 自燃全开 =====
 function onBurnChange(e) {

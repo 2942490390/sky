@@ -217,14 +217,6 @@ export function stopBloomLoop() {
 }
 
 // ================= 吸火 =================
-const XIHUO_FEATURE_I32 = '-842150656'
-const XIHUO_SEARCH_FROM = '0x100000000'
-const XIHUO_SEARCH_TO = '0x1600000000'
-const XIHUO_NEARBY_VALUE = '-1'
-const XIHUO_NEARBY_RANGE = '0x60'
-const XIHUO_TARGET_VALUE = 3.5
-const XIHUO_WRITE_VALUE = 999
-
 let xihuoTimer = null
 let xihuoRunning = false
 
@@ -235,46 +227,18 @@ async function xihuoOnce() {
 
     try {
         h5gg.clearResults()
-        h5gg.searchNumber(XIHUO_FEATURE_I32, 'I32', XIHUO_SEARCH_FROM, XIHUO_SEARCH_TO)
-        await customDelay(0)
-
-        h5gg.searchNearby(XIHUO_NEARBY_VALUE, 'F32', XIHUO_NEARBY_RANGE)
-        h5gg.searchNumber(XIHUO_NEARBY_VALUE, 'F32', XIHUO_SEARCH_FROM, XIHUO_SEARCH_TO)
-        await customDelay(0)
-
+        h5gg.searchNumber('3.5', 'F32', '0x110000000', '0x2000000000')
+        h5gg.searchNearby('-1', 'F32', '0x60')
+        h5gg.searchNumber('3.5', 'F32', '0x00000000', '0x2000000000')
         const count = h5gg.getResultsCount()
         if (!count) {
             h5gg.clearResults()
             return false
         }
-
-        const r = h5gg.getResults(count) || []
-        let wrote = false
-        for (let i = 0; i < r.length; i++) {
-            const item = r[i]
-            if (!item || !item.address) continue
-
-            const addr2Num = Number(item.address) + 4
-            if (!Number.isFinite(addr2Num) || addr2Num <= 0) continue
-            const addr2Hex = '0x' + addr2Num.toString(16)
-
-            let v
-            try {
-                v = Number(h5gg.getValue(addr2Hex, 'F32'))
-            } catch (e) {
-                continue
-            }
-
-            if (Math.abs(v - XIHUO_TARGET_VALUE) < 0.0001) {
-                try {
-                    h5gg.setValue(addr2Hex, XIHUO_WRITE_VALUE, 'F32')
-                    wrote = true
-                } catch (e) { }
-            }
-        }
-
+        h5gg.editAll('1000000000', 'F32')
+        await customDelay(0)
         h5gg.clearResults()
-        return wrote
+        return true
     } catch (e) {
         try { h5gg.clearResults() } catch (_) { }
         return false
