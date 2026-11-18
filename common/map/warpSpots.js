@@ -21,7 +21,7 @@ export const subMapData = {
 			{ name: "仙境茶会", warpId: "MainStreet_Cafe_Wonderland", anyDoorCode: "MainStreet_Cafe_Wonderland" },
 			{ name: "AR卧室", warpId: "AR_Bedroom", anyDoorCode: "AR_Bedroom" },
 			{ name: "AR麦田", warpId: "AR_WheatField", anyDoorCode: "AR_WheatField" },
-			{ name: "法国，阿尔勒小屋", warpId: "Nest_Night_GO_Town", anyDoorCode: "Nest_Night_GO_Town" },
+			{ name: "致梵高季主题小屋", warpId: "Nest_Night_GO_Town", anyDoorCode: "Nest_Night_GO_Town" },
 			{ name: "AR测试关卡", warpId: "AR_TestLevel", anyDoorCode: "AR_TestLevel" },
 			{ name: "地下办公室", warpId: "UndergroundOffice", anyDoorCode: "UndergroundOffice" },
 			{ name: "狂欢季", warpId: "MainStreet_FunArmada", anyDoorCode: "MainStreet_FunArmada" },

@@ -217,71 +217,72 @@ export function stopBloomLoop() {
 }
 
 // ================= 吸火 =================
-let xihuoTimer = null
-let xihuoRunning = false
+let xihuoRestoreTimer = null
 
+/**
+ * 执行一次吸火：
+ * 1. 搜索并 editAll 到 1000000000
+ * 2. 5 秒后自动改回 3.5
+ * 返回 true = 吸火成功；false = 没找到
+ */
 export async function xihuoOnce() {
     if (typeof h5gg === 'undefined' || typeof h5gg.searchNumber !== 'function') {
         return false
     }
 
+    // 如果上一次的还原定时器还在，先清掉（避免叠加重置）
+    if (xihuoRestoreTimer) {
+        clearTimeout(xihuoRestoreTimer)
+        xihuoRestoreTimer = null
+    }
+
+    let ok = false
     try {
         h5gg.clearResults()
         h5gg.searchNumber('3.5', 'F32', '0x110000000', '0x2000000000')
         h5gg.searchNearby('-1', 'F32', '0x60')
         h5gg.searchNumber('3.5', 'F32', '0x00000000', '0x2000000000')
+
         const count = h5gg.getResultsCount()
         if (!count) {
             h5gg.clearResults()
             return false
         }
+
         h5gg.editAll('1000000000', 'F32')
         await customDelay(0)
         h5gg.clearResults()
-        return true
+        ok = true
     } catch (e) {
         try { h5gg.clearResults() } catch (_) { }
         return false
     }
+
+    if (ok) {
+        // 5 秒后改回 3.5（基于同样的搜索条件）
+        xihuoRestoreTimer = setTimeout(() => {
+            xihuoRestoreTimer = null
+            try {
+                h5gg.clearResults()
+                h5gg.searchNumber('1000000000', 'F32', '0x110000000', '0x2000000000')
+                h5gg.searchNearby('-1', 'F32', '0x60')
+                h5gg.searchNumber('1000000000', 'F32', '0x00000000', '0x2000000000')
+                if (h5gg.getResultsCount()) {
+                    h5gg.editAll('3.5', 'F32')
+                }
+                h5gg.clearResults()
+            } catch (e) { }
+        }, 5000)
+    }
+
+    return true
 }
 
-let xihuoToastInited = false
-let xihuoLastOk = null
-
-export async function xihuoLoop(enabled) {
-    if (xihuoTimer) {
-        clearTimeout(xihuoTimer)
-        xihuoTimer = null
+export function clearXihuoTimer() {
+    if (xihuoRestoreTimer) {
+        clearTimeout(xihuoRestoreTimer)
+        xihuoRestoreTimer = null
     }
-    if (!enabled) {
-        xihuoRunning = false
-        xihuoToastInited = false
-        xihuoLastOk = null
-        return
-    }
-
-    xihuoRunning = true
-    const wrote = xihuoOnce()
-
-    if (xihuoLastOk !== wrote) {
-        xihuoLastOk = wrote
-        if (wrote) {
-            uni.showToast({ icon: 'none', title: '已吸取当前地图烛火' })
-        } else if (!xihuoToastInited) {
-            uni.showToast({ icon: 'none', title: '附近没有可吸取的烛火' })
-        }
-        xihuoToastInited = true
-    }
-
-    if (!xihuoRunning) return
-}
-
-export function stopXihuoLoop() {
-    if (xihuoTimer) {
-        clearTimeout(xihuoTimer)
-        xihuoTimer = null
-    }
-    xihuoRunning = false
 }
 
 // ================= 隐藏蜡烛 =================

@@ -552,7 +552,7 @@ function clearAnyDoor() {
 	position: absolute;
 	inset: 0;
 	padding: 16px 14px;
-	background: #fff;
+	background: transparent;
 	border-radius: 8px;
 	z-index: 100;
 	overflow: hidden;
@@ -671,9 +671,9 @@ function clearAnyDoor() {
 	width: 100%;
 	height: 32px;
 	padding: 2px;
-	border: 1px solid #e8edf4;
+	border: 1px solid rgba(255, 255, 255, 0.4);
 	border-radius: 16px;
-	background: #fff;
+	background: rgba(255, 255, 255, 0.25);
 	color: #334155;
 	font-size: 11px;
 	font-weight: 500;
@@ -727,7 +727,7 @@ function clearAnyDoor() {
 	margin-left: auto;
 	height: 24px;
 	padding: 0 10px;
-	border: 1px solid #b8c9e0;
+	/* border: 1px solid #b8c9e0; */
 	border-radius: 48px;
 	background: #eaf1fb;
 	color: #4a6fa5;

@@ -1205,7 +1205,7 @@ async function applyChainToTarget(c) {
 .modal-box {
 	width: 92%;
 	max-width: 600px;
-	max-height: 80vh;
+	max-height: 90vh;
 	/* ★ 关键：限制高度 */
 	background: #f2f2f7;
 	border-radius: 14px;
@@ -1213,7 +1213,7 @@ async function applyChainToTarget(c) {
 	flex-direction: column;
 	padding: 6px 4px;
 	box-sizing: border-box;
-	gap: 8px;
+	gap: 4px;
 }
 
 .modal-title {

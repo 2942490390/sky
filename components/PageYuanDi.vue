@@ -17,7 +17,7 @@
 		<view class="sky-task">
 			<view class="task-left">
 				<text class="fa-solid fa-fire-flame-curved"></text>
-				<text>获取燃料</text>
+				<text>获取染料</text>
 			</view>
 			<button class="sky-btn" @click="ydrl()" @touchstart="preventTouch">执行</button>
 		</view>

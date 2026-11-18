@@ -121,8 +121,8 @@ import {
 	stopBurnLoop,
 	stopEnergyLoop,
 	stopSpeedLoop,
-	stopXihuoLoop,
-	xihuoOnce
+	xihuoOnce,
+	clearXihuoTimer
 } from '@/common/h5gg.js'
 
 import {
@@ -187,21 +187,6 @@ defineExpose({
 	deactivate
 })
 
-
-
-onUnmounted(() => {
-	deactivate()
-	stopEnergyLoop()
-	stopSpeedLoop()
-	stopBurnLoop()
-	stopBloomLoop()
-	stopXihuoLoop()
-	stopLockHeight()
-	clearCandleAddr()
-	clearLockHeightAddr()
-})
-
-
 // ===== 跑图间隔滑块 =====
 function onIntervalChanging(e) {
 	autoRunInterval.value = Number(e.detail.value)
@@ -235,25 +220,46 @@ function wxnl(e) {
 	energyLoop(checked)
 }
 
-// ===== 吸火 =====
-function xihuo(e) {
-	// swState.xihuo = e.detail.value
-	const res = xihuoOnce()
-	if (res) {
-		uni.showToast({
-			icon: 'none',
-			title: '已吸取当前地图烛火'
-		})
-		swState.xihuo = true
-	} else {
-		uni.showToast({
-			icon: 'none',
-			title: '附近没有可吸取的烛火'
-		})
+// ===== 吸火（一次性，5秒后自动关闭开关） =====
+let xihuoBusy = false
+
+async function xihuo(e) {
+	const checked = e.detail.value
+
+	// 关闭 → 什么都不做（还原由定时器负责）
+	if (!checked) {
 		swState.xihuo = false
+		return
+	}
+
+	// 防重入
+	if (xihuoBusy) return
+	xihuoBusy = true
+
+	// 先标记开启，让 UI 显示打开
+	swState.xihuo = true
+
+	try {
+		const ok = await xihuoOnce()
+
+		if (ok) {
+			uni.showToast({ icon: 'none', title: '已吸取烛火' })
+			// 5 秒后自动关闭开关（与 burnBloom.js 里的还原时间对齐）
+			setTimeout(() => {
+				swState.xihuo = false
+			}, 5000)
+		} else {
+			uni.showToast({ icon: 'none', title: '附近没有可吸取的烛火' })
+			swState.xihuo = false
+		}
+	} catch (err) {
+		console.error('[xihuo] 出错:', err)
+		uni.showToast({ icon: 'none', title: '吸火失败' })
+		swState.xihuo = false
+	} finally {
+		xihuoBusy = false
 	}
 }
-
 
 // ===== 自燃全开 =====
 function onBurnChange(e) {
@@ -455,6 +461,18 @@ async function toggleLockHeight() {
 		})
 	}
 }
+
+onUnmounted(() => {
+	deactivate()
+	stopEnergyLoop()
+	stopSpeedLoop()
+	stopBurnLoop()
+	stopBloomLoop()
+	clearXihuoTimer()
+	stopLockHeight()
+	clearCandleAddr()
+	clearLockHeightAddr()
+})
 </script>
 
 <style scoped>
