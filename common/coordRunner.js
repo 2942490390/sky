@@ -7,6 +7,7 @@ import {
 	AUTO_RUN_POINTS
 } from './autoRunPoints.js'
 import { setAddr, invalidateAddr } from './addressRegistry.js'
+import { readMapName } from './str-tool/strReader.js'
 
 // ================= 缓存状态 =================
 let coordTimer = null
@@ -24,12 +25,27 @@ export function invalidateRwdzCache() {
 	cachedKey35Addr = 0
 	invalidateAddr('coordX'); invalidateAddr('coordZ'); invalidateAddr('coordY')
 }
+/**
+ * 注册坐标地址的函数
+ * @param {number} xAddr - X坐标的地址
+ * @param {number} flagAddr - 标志地址
+ */
 function registerCoordAddrs(xAddr, flagAddr) {
-	setAddr('rwdz', xAddr, { type: 'BASE' })
+	// 设置基础地址
+	// setAddr('rwdz', xAddr, { type: 'BASE' })
+	// 设置X坐标地址，类型为32位浮点数
 	setAddr('coordX', xAddr, { type: 'F32' })
+	// 设置Z坐标地址，类型为32位浮点数，偏移量为4字节
 	setAddr('coordZ', xAddr + 4, { type: 'F32' })
+	// 设置Y坐标地址，类型为32位浮点数，偏移量为8字节
 	setAddr('coordY', xAddr + 8, { type: 'F32' })
+	// 设置标志地址，类型为十六进制，并读取其值
 	setAddr('flagAddr', flagAddr, { type: 'HEX', value: readHexU32(flagAddr) })
+	// 读取地图名称原始数据，地址为xAddr + 12878832
+	const strRaw = readMapName('0x' + (xAddr + 12878832).toString(16))
+	const str = strRaw.substring(0, strRaw.indexOf("?"))
+	// 设置levelLoc地址，类型为字符串，值为处理后的str
+	setAddr('levelLoc', xAddr + 12878832, { type: 'STR', value: str })
 }
 // ================= 缓存有效性校验 =================
 // 用缓存的地址读一次，校验特征值是否还对，对就返回坐标，否则返回 null

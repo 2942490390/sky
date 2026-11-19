@@ -23,7 +23,7 @@ export const GROUPS = {
 //   F32/I32/I64/U64... = 直接按该类型读
 export const ADDR_META = {
     // --- 坐标 ---
-    rwdz: { label: '人物坐标', group: 'coordinate', type: 'BASE', desc: 'rwdz 指针基址，X/Y/Z 起点' },
+    // rwdz: { label: '人物坐标', group: 'coordinate', type: 'BASE', desc: 'rwdz 指针基址，X/Y/Z 起点' },
     coordX: { label: '坐标 X', group: 'coordinate', type: 'F32', desc: 'rwdz + 0' },
     coordZ: { label: '坐标 Z', group: 'coordinate', type: 'F32', desc: 'rwdz + 4' },
     coordY: { label: '坐标 Y', group: 'coordinate', type: 'F32', desc: 'rwdz + 8' },
@@ -85,6 +85,7 @@ export const ADDR_META = {
     // --- 其他 ---
     mapId: { label: '当前地图ID', group: 'other', type: 'I32', desc: 'rwdz + 24812' },
     mapName: { label: '当前地图名', group: 'other', type: 'STRING', desc: 'rwdz + 24812' },
+    levelLoc: { label: '当前关卡英文名', group: 'other', type: 'STR', desc: 'rwdz + 12878832' },
 
 }
 

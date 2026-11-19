@@ -171,6 +171,40 @@ export function clearOffsets() {
 	clearMainCache()
 }
 
+/**
+ * 获取对象原型链上的所有方法名
+ * @param {Object} obj - 要检查的对象
+ * @returns {Array} 包含所有方法名的数组
+ */
+export function getAllMethodsFromPrototype(obj) {
+    let methods = []  // 存储找到的所有方法
+    let currentObj = obj  // 从当前对象开始遍历
+
+    // 遍历原型链，直到 null
+    while (currentObj) {
+        // 获取当前层级的所有自有属性名
+        const props = Object.getOwnPropertyNames(currentObj)
+
+        props.forEach(prop => {
+            // 过滤出函数，并避免重复添加
+            if (typeof currentObj[prop] === 'function' && !methods.includes(prop)) {
+                methods.push(prop)  // 将找到的方法添加到数组中
+            }
+        })
+
+        // 移动到上一层原型
+        currentObj = Object.getPrototypeOf(currentObj)
+
+        // 防止死循环（虽然 Object.prototype 的原型是 null，但做个保险）
+        if (currentObj === Object.prototype) {
+            // 可选：是否要包含 Object.prototype 的方法如 toString? 
+            // 通常不需要，可以 break
+            break
+        }
+    }
+    return methods  // 返回找到的所有方法数组
+}
+
 // ============================================================
 // 功能模块 re-export（保持对外 API 不变）
 // ============================================================
