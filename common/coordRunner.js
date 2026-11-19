@@ -206,7 +206,7 @@ export async function teleportTo(x, z, y) {
 let autoRunTimer = null
 let autoRunRunning = false
 let autoRunIndex = 0
-let autoRunIntervalSec = 3.8
+let autoRunIntervalSec = 3.0
 let autoRunStarting = false
 
 export async function startAutoRun(opts = {}) {
@@ -214,7 +214,7 @@ export async function startAutoRun(opts = {}) {
 	autoRunStarting = true
 	try {
 		const {
-			intervalSec = 3.8, reset = false, onStep, onFinish
+			intervalSec = 3.0, reset = false, onStep, onFinish
 		} = opts
 		if (autoRunTimer) {
 			clearTimeout(autoRunTimer)

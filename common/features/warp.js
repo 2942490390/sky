@@ -1,7 +1,7 @@
 // common/features/warp.js
 // 任意传送 / 地图核心
 
-import { getPtr, writeSafe } from '../h5gg.js'
+import { getPtr, writeSafe, waitForOffsetsReady } from '../h5gg.js'
 import { setAddr } from '../addressRegistry.js'
 import { map_point, mapIdToName, zhAlias } from '../getMapPoint.js'
 import { speedLoop, stopSpeedLoop } from './energy.js'
@@ -55,64 +55,39 @@ export function readHexU32(addrNum) {
 
 const WARPS_CSDZ_HEX = '0x646E6143'
 
-/**
- * 查找传送路牌地址的异步函数
- * @returns {Promise<number|null>} 返回找到的路牌地址，如果未找到则返回null
- */
 async function findWarpCsdz() {
-    // 如果已经缓存了warpCsdz地址，先验证其有效性
     if (warpCsdz) {
-        // 读取32位十六进制值
         const hex = readHexU32(warpCsdz)
-        // 如果匹配预期的路牌十六进制值，直接返回缓存地址
         if (hex === WARPS_CSDZ_HEX) return warpCsdz
-        // 不匹配则清除缓存
         warpCsdz = null
     }
 
-    // 清空搜索结果
     h5gg.clearResults()
-    // 在指定内存范围内搜索特定数值（路牌标识）
     h5gg.searchNumber('1487508559', 'I32', '0x130000000', '0x200000000')
-    // 再次搜索以确保结果准确
     h5gg.searchNumber('1487508559', 'I32', '0x130000000', '0x200000000')
-    // 获取搜索结果数量
     const count = h5gg.getResultsCount()
 
-    // 如果没有找到任何结果，清空搜索结果并返回null
     if (!count) {
         h5gg.clearResults()
         return null
     }
 
-    // 获取所有搜索结果
     const results = h5gg.getResults(count) || []
 
-    // 遍历搜索结果
     for (let i = 0; i < results.length; i++) {
         const item = results[i]
-        // 跳过无效结果
         if (!item || !item.address) continue
-
-        // 计算候选地址（偏移12字节）
         const candidate = Number(item.address) + 12
-        // 读取候选地址的32位十六进制值
         const hex = readHexU32(candidate)
-
-        // 如果找到匹配的路牌十六进制值
         if (hex === WARPS_CSDZ_HEX) {
-            // 缓存有效地址
             warpCsdz = candidate
-            // 输出找到路牌的日志信息
             console.log('[传送] ✅ 路牌地址有效: 0x' + candidate.toString(16) +
                 ' (' + hex + ')，第 ' + (i + 1) + '/' + results.length + ' 条')
-            // 清空搜索结果并返回地址
             h5gg.clearResults()
             return warpCsdz
         }
     }
 
-    // 未找到有效路牌地址，清除缓存并返回null
     warpCsdz = null
     h5gg.clearResults()
     return null
@@ -139,9 +114,7 @@ function findMapI32ByName(engName, zhName) {
 let warping = false
 
 export async function executeWarp(targetMapId, targetZhName) {
-    if (warping) {
-        return { success: false, reason: 'busy' }
-    }
+    if (warping) return { success: false, reason: 'busy' }
 
     const targetMapI32 = findMapI32ByName(targetMapId, targetZhName)
     if (targetMapI32 === null) {
@@ -160,12 +133,9 @@ export async function executeWarp(targetMapId, targetZhName) {
         const rwdzRaw = await getPtr('rwdz')
         if (!rwdzRaw) throw new Error('人物地址无效')
 
-        const rwdzBig = typeof rwdzRaw === 'bigint' ?
-            rwdzRaw :
-            BigInt(String(rwdzRaw).trim())
-
+        const rwdzBig = typeof rwdzRaw === 'bigint' ? rwdzRaw : BigInt(String(rwdzRaw).trim())
         const mapIdBig = rwdzBig + 24812n
-        const mapIdAddrHex = '0x' + mapIdBig.toString(16) // 地图ID地址
+        const mapIdAddrHex = '0x' + mapIdBig.toString(16)
 
         const currentMapI32 = Number(h5gg.getValue(mapIdAddrHex, 'I32'))
         setAddr('mapId', mapIdAddrHex, { type: 'I32', value: currentMapI32 })
@@ -220,9 +190,7 @@ export async function executeWarp(targetMapId, targetZhName) {
     }
 }
 
-export function clearWarpAddr() {
-    warpCsdz = null
-}
+export function clearWarpAddr() { warpCsdz = null }
 
 // ================= 地图核心 =================
 let mapCoreAddr = null
@@ -281,36 +249,28 @@ export function clearMapCore() {
 
 // ============================================================
 // 任意门（AnyDoor）实现
-// 特征码随地图不同而不同，用 AD_MAP_SIGNATURES 维护映射
-//   → 首次搜索：按当前地图 ID 选特征码，搜到后缓存地址
-//   → 缓存后：后续传送不再检查地图，直接用缓存地址
 // ============================================================
+const AD_STR_OFFSET = 0x2C
+const AD_FLAG1_OFFSET = 18420
+const AD_FLAG2_OFFSET = 0x60
+const AD_FLAG1_VALUE = 80
+const AD_FLAG2_VALUE = -1
+const AD_STR_CLEAR_LEN = 24
+const AD_STR_MAX_LEN = 31
+const AD_RWDZ_MAPID_OFFSET = 24812n
 
-const AD_STR_OFFSET = 0x2C // 传送字符串地址偏移
-const AD_FLAG1_OFFSET = 18420 // 传送标志1地址偏移
-const AD_FLAG2_OFFSET = 0x60 // 传送标志2地址偏移
-const AD_FLAG1_VALUE = 80 // 传送标志1的值（表示传送请求已发出）
-const AD_FLAG2_VALUE = -1 // 传送标志2的值（表示传送已完成）
-const AD_STR_CLEAR_LEN = 24 // 传送字符串清空长度（字节数）
-const AD_STR_MAX_LEN = 31 // 传送字符串最大长度（字节数）
-const AD_RWDZ_MAPID_OFFSET = 24812n // X地址中地图 ID 地址偏移
-
-// ---- 地图特征码表 ----
-// key: 地图 I32（与 mapIdToName 的 key 一致）
-// value: 该地图下可搜到的特征码
 const AD_MAP_SIGNATURES = {
     '-768833570': '1141201306',   // 遇境
-    '1509719447': '-1040239821',          // 云巢（待补特征码）
-    '-389882442': '1137190502',           // 云巢小屋（待补特征码）
-    // 后续按同样格式追加：
-    // '地图I32': '特征码',
+    '1509719447': '-1040239821',  // 云巢
+    '-389882442': '1137190502',   // 云巢小屋
+    '1936276829': '1089213403',  // 故事空间
 }
 
-// 已补特征码的地图名（用于日志）
 const AD_MAP_NAMES = {
     '-768833570': '遇境',
     '-1040239821': '云巢',
     '1137190502': '云巢小屋',
+    '1089213403': '故事空间'
 }
 
 let adRymAddr = null
@@ -319,38 +279,55 @@ let adStrAddr = null
 let adFlag1Addr = null
 let adFlag2Addr = null
 let adInited = false
-let adCurrentMapId = null   // 缓存时所在的地图 ID，用于日志/调试
+let adCurrentMapId = null
 
-// ---- 读当前地图 ID ----
 /**
  * 获取当前地图信息的异步函数
- * 该函数通过读取内存中的地址来获取当前地图的ID、名称和签名
+ * 该函数会尝试获取当前地图的ID、名称和签名，并进行错误处理
  * @returns {Object} 返回包含地图信息的对象，包含id、name、sig和addr属性
  */
 async function adGetCurrentMap() {
     try {
-        // 获取人物地址的原始值
-        const rwdzRaw = await getPtr('rwdz')
-        // 如果人物地址无效，返回未知地图信息
+        // 等待偏移量准备就绪
+        await waitForOffsetsReady()
+
+        let rwdzRaw = null  // 存储原始人物地址的变量
+        let retries = 0    // 重试次数计数器
+        // 当没有获取到有效地址且重试次数小于5时，继续尝试获取
+        while (!rwdzRaw && retries < 5) {
+            // 获取人物地址
+            rwdzRaw = await getPtr('rwdz')
+            // 如果获取失败，等待50毫秒后重试
+            if (!rwdzRaw) {
+                await new Promise(r => setTimeout(r, 50))
+                retries++  // 增加重试次数
+            }
+        }
+
+        // 如果多次尝试后仍未获取到有效地址，返回未知地图信息
         if (!rwdzRaw) {
             return { id: null, name: '未知（人物地址无效）', sig: null }
         }
-        // 将地址值转换为BigInt类型
-        const rwdzBig = typeof rwdzRaw === 'bigint'
-            ? rwdzRaw
-            : BigInt(String(rwdzRaw).trim())
-        // 计算地图ID的内存地址偏移
+
+        // 将地址转换为BigInt类型
+        const rwdzBig = typeof rwdzRaw === 'bigint' ? rwdzRaw : BigInt(String(rwdzRaw).trim())
+        // 计算地图ID的内存地址
         const mapIdBig = rwdzBig + AD_RWDZ_MAPID_OFFSET
         // 将地址转换为十六进制字符串格式
         const mapIdAddrHex = '0x' + mapIdBig.toString(16)
-        // 从内存中读取当前地图ID
+        // 从内存中读取地图ID值
         const curMapId = Number(h5gg.getValue(mapIdAddrHex, 'I32'))
 
-        // ★ 注册"当前地图ID"（数值）
-        setAddr('mapId', mapIdAddrHex, { type: 'I32' })
+        // 如果地图ID无效或为0，返回读取中的状态
+        if (!curMapId || curMapId === 0) {
+            return { id: null, name: '读取中（地图ID为0）', sig: null }
+        }
 
-        // ★ 注册"当前地图名"（字符串，由 ID 映射，不走内存读）
+        // 设置地图ID的内存地址引用
+        setAddr('mapId', mapIdAddrHex, { type: 'I32' })
+        // 获取当前地图名称，如果没有则使用"未知(地图ID)"格式
         const curMapName = mapIdToName[String(curMapId)] || ('未知(' + curMapId + ')')
+        // 设置地图名称的内存地址引用，并设置派生函数用于动态获取
         setAddr('mapName', mapIdAddrHex, {
             type: 'STRING',
             derive: (getValueFn) => {
@@ -358,17 +335,42 @@ async function adGetCurrentMap() {
                 return mapIdToName[String(id)] || ('未知(' + id + ')')
             }
         })
-        // 获取当前地图的签名，如果找不到则为null
+
+        // 获取当前地图的签名，如果没有则为null
         const sig = AD_MAP_SIGNATURES[String(curMapId)] || null
-        // 返回包含完整地图信息的对象
+        // 返回完整的地图信息
         return { id: curMapId, name: curMapName, sig, addr: mapIdAddrHex }
     } catch (e) {
-        // 捕获并处理可能的异常，返回错误信息
+        // 捕获并打印异常信息
         console.error('[任意门] 读当前地图异常:', e)
+        // 返回异常状态
         return { id: null, name: '读取异常', sig: null, addr: null }
     }
 }
 
+/**
+ * 向指定内存地址写入字符串
+ * @function adWriteString
+ * @param {number} addr - 目标内存地址，必须为正数
+ * @param {*} str - 要写入的字符串，会被转换为字符串类型
+ * @returns {boolean} 写入成功返回true，失败返回false
+ * 
+ * @description
+ * 该函数用于向指定内存地址写入字符串，具体功能如下：
+ * 1. 检查地址有效性（必须为正数）
+ * 2. 将输入转换为字符串类型
+ * 3. 清除目标地址原有内容（使用AD_STR_CLEAR_LEN长度）
+ * 4. 写入新字符串内容（最大长度为AD_STR_MAX_LEN）
+ * 5. 确保字符串以null结尾
+ * 
+ * @throws {Error} 当内存操作失败时会在控制台输出错误信息
+ * 
+ * @example
+ * const success = adWriteString(0x123456, "Hello World");
+ * if (!success) {
+ *     console.log("写入失败");
+ * }
+ */
 function adWriteString(addr, str) {
     if (!addr || addr <= 0) return false
     const s = String(str || '')
@@ -390,24 +392,23 @@ function adWriteString(addr, str) {
 }
 
 /**
- * 从指定地址读取字符串
- * @param {number} addr - 要读取的内存地址
- * @returns {string} - 返回读取到的字符串，如果读取失败则返回空字符串
+ * 从指定内存地址读取字符串
+ * @param {number} addr - 内存地址
+ * @returns {string} 读取到的字符串，如果读取失败则返回空字符串
  */
 function adReadString(addr) {
     // 检查地址是否有效
     if (!addr || addr <= 0) return ''
     try {
-        // 创建一个数组用于存储原始数据
+        // 初始化存储原始数据的数组
         const raw = []
-        // 循环读取指定长度的数据
+        // 循环读取指定长度的内存数据
         for (let i = 0; i < AD_STR_CLEAR_LEN; i++) {
-            // 将地址转换为十六进制，并读取一个U8类型的数据
+            // 将地址转换为十六进制，并读取该地址处的U8类型值
             raw.push(Number(h5gg.getValue('0x' + (addr + i).toString(16), 'U8')))
         }
-        // 初始化起始位置为-1
+        // 查找有效字符的起始位置
         let start = -1
-        // 查找第一个可打印字符的位置
         for (let i = 0; i < raw.length; i++) {
             if (raw[i] >= 0x20 && raw[i] <= 0x7E) { start = i; break }
         }
@@ -423,28 +424,28 @@ function adReadString(addr) {
     return ''
 }
 
-// 用指定特征码定位，返回是否成功
 /**
- * 根据特征码定位游戏中的特定地址
+ * 通过特征码定位游戏内存地址
  * @param {number} searchValue - 要搜索的特征码值
- * @returns {boolean} 是否成功定位到有效地址
+ * @returns {boolean} - 是否成功定位到有效地址
  */
 function adLocateBySignature(searchValue) {
     try {
-        // 清空之前的搜索结果，确保搜索环境干净
+        // 清除之前的搜索结果
         h5gg.clearResults()
         // 在指定内存范围内搜索特征码
         h5gg.searchNumber(searchValue, 'I32', '0x130000000', '0x200000000')
         // 获取搜索结果的数量
         const count = h5gg.getResultsCount()
         console.log('[任意门] 特征码 ' + searchValue + ' 搜索结果数:', count)
-        // 如果没有搜索到结果，清空结果并返回false
+        // 如果没有搜索结果，清除结果并返回false
         if (!count) {
             h5gg.clearResults()
             return false
         }
         // 获取所有搜索结果
         const results = h5gg.getResults(count) || []
+        // 清除搜索结果
         h5gg.clearResults()
         // 如果结果为空，返回false
         if (!results.length) return false
@@ -454,7 +455,7 @@ function adLocateBySignature(searchValue) {
         for (let i = 0; i < results.length; i++) {
             // 获取基础地址
             const baseAddr = Number(results[i].address)
-            // 检查地址是否有效
+            // 如果地址无效，跳过当前循环
             if (!baseAddr || baseAddr <= 0) continue
 
             // 计算测试地址和字符串地址
@@ -463,45 +464,52 @@ function adLocateBySignature(searchValue) {
 
             let sample = ''
             try {
-                // 读取字符串数据
+                // 收取原始字节
                 const raw = []
+                // 读取指定长度的字节
                 for (let j = 0; j < AD_STR_CLEAR_LEN; j++) {
                     raw.push(Number(h5gg.getValue('0x' + (testStr + j).toString(16), 'U8')))
                 }
-                let start = -1 // 查找第一个可打印字符的位置
+                // 查找可打印字符的起始位置
+                let start = -1
                 for (let j = 0; j < raw.length; j++) {
-                    // 如果字符在可打印范围内，则记录起始位置
                     if (raw[j] >= 0x20 && raw[j] <= 0x7E) { start = j; break }
                 }
+                // 如果找到有效起始位置，构建字符串样本
                 if (start >= 0) {
                     for (let j = start; j < raw.length; j++) {
                         const b = raw[j]
-                        // 如果字符是空字符或不可打印字符，则停止读取
+                        // 遇到非可打印字符时停止
                         if (b === 0 || b < 0x20 || b > 0x7E) break
                         sample += String.fromCharCode(b)
                     }
                 }
-            } catch (e) { continue }
+            } catch (e) { continue } // 如果读取失败，跳过当前循环
 
-            const isMapName = /^[A-Za-z0-9_]{2,31}$/.test(sample) // 检查字符串是否为关卡名
+            // 检查字符串是否符合关卡名格式
+            const isMapName = /^[A-Za-z0-9_]{2,31}$/.test(sample)
             console.log(`[任意门] 候选 ${i + 1}/${results.length}: baseAddr=0x${baseAddr.toString(16)}, 字符串="${sample}", 像关卡名=${isMapName}`)
 
+            // 如果符合关卡名格式，选择这个地址
             if (isMapName) {
                 chosen = { baseAddr, sample }
                 break
             }
         }
 
+        // 如果没有找到合适的候选地址
         if (!chosen) {
             console.warn('[任意门] 特征码 ' + searchValue + ' 的所有候选都不像关卡名')
             return false
         }
+        // 设置各种地址变量
         adRymAddr = chosen.baseAddr
-        adRym = chosen.baseAddr + 4 // 读取随机数地址
-        adStrAddr = adRym + AD_STR_OFFSET // 读取字符串地址
-        adFlag1Addr = adRym + AD_FLAG1_OFFSET // 读取标志1地址
-        adFlag2Addr = adRym + AD_FLAG2_OFFSET // 读取标志2地址
+        adRym = chosen.baseAddr + 4
+        adStrAddr = adRym + AD_STR_OFFSET
+        adFlag1Addr = adRym + AD_FLAG1_OFFSET
+        adFlag2Addr = adRym + AD_FLAG2_OFFSET
 
+        // 输出选定的地址信息
         console.log('[任意门] 选定 baseAddr=0x' + chosen.baseAddr.toString(16) +
             ', rym=0x' + adRym.toString(16) +
             ', str=0x' + adStrAddr.toString(16) +
@@ -510,89 +518,121 @@ function adLocateBySignature(searchValue) {
             ', 当前字符串="' + chosen.sample + '"')
         return true
     } catch (e) {
+        // 捕获并处理异常
         console.error('[任意门] 特征码定位异常:', e)
-        try { h5gg.clearResults() } catch (_) { }
+        try { h5gg.clearResults() } catch (_) { } // 确保清除搜索结果
         return false
     }
 }
 
-// 初始化：
-//   已有缓存 → 直接返回 true，不检查地图
-//   无缓存   → 读当前地图 → 查特征码表 → 有则搜并缓存
+/**
+ * 初始化任意门功能
+ * 该函数用于初始化任意门功能，包括检查缓存、获取当前地图信息、定位特征码等操作
+ * @returns {Promise<boolean>} 返回一个Promise，解析为初始化是否成功
+ */
 export async function initAnyDoor() {
+    // 检查是否已经初始化且相关地址有效
     if (adInited && adRym && adStrAddr) {
         try {
+            // 尝试读取缓存地址的值，如果成功则返回true
             Number(h5gg.getValue('0x' + adFlag1Addr.toString(16), 'I32'))
             return true
         } catch (e) {
+            // 如果读取失败，输出警告信息并重置初始化状态
             console.warn('[任意门] 缓存地址失效，需要重新搜索')
             adInited = false
         }
     }
 
-    // 读当前地图，查特征码表
+    // 获取当前地图信息
     const cur = await adGetCurrentMap()
+    // 检查是否成功获取地图ID
     if (!cur.id) {
         console.warn('[任意门] 无法读取当前地图，初始化失败')
         return false
     }
+    // 输出当前地图信息
     console.log('[任意门] 当前地图: ' + cur.name + ' (I32=' + cur.id + ')' + ', 地址= ' + (cur.addr || '未知'))
 
+    // 检查当前地图是否有特征码配置
     if (cur.sig === null) {
         console.warn('[任意门] 当前地图「' + cur.name + '」暂未配置特征码，无法初始化')
         return false
     }
 
+    // 根据特征码进行定位
     const ok = adLocateBySignature(cur.sig)
+    // 更新初始化状态
     adInited = ok
     if (ok) {
+        // 保存当前地图ID
         adCurrentMapId = cur.id
+        // 设置特征码和字符串的地址
         setAddr('任意门特征码', adRymAddr, { type: 'I32' })
         setAddr('任意门字符串', adStrAddr, { type: 'STR' })
+        // 输出缓存成功信息
         console.log('[任意门] 缓存成功，来源地图: ' + cur.name)
     }
     return ok
 }
 
-// 传送：有缓存直接用，不再检查地图
+/**
+ * 任意门功能实现函数，用于写入特定代码并设置标志位
+ * @param {string} code - 要写入的代码字符串
+ * @returns {Object} 包含操作结果的对象
+ */
 export async function goMapAnyDoor(code) {
+    // 检查输入参数是否有效
     if (!code || typeof code !== 'string') {
         return { success: false, reason: 'bad-arg' }
     }
+    // 检查代码格式是否合法（只允许字母、数字和下划线）
     if (!/^[A-Za-z0-9_]+$/.test(code)) {
         return { success: false, reason: 'bad-code' }
     }
+    // 检查代码长度是否超过最大限制
     if (code.length > AD_STR_MAX_LEN) {
         return { success: false, reason: 'code-too-long', maxLen: AD_STR_MAX_LEN, input: code.length }
     }
 
+    // 初始化任意门功能，如果失败则返回错误
     if (!await initAnyDoor()) {
         return { success: false, reason: 'init-failed' }
     }
 
     try {
+        // 读取并显示写入前的字符串内容
         const before = adReadString(adStrAddr)
         console.log('[任意门] 写前字符串="' + before + '"')
 
+        // 尝试写入新代码
         if (!adWriteString(adStrAddr, code)) {
             return { success: false, reason: 'write-string-failed' }
         }
+        // 写入后立即读取并验证
         const afterWrite = adReadString(adStrAddr)
         console.log('[任意门] 写后立即读="' + afterWrite + '" (期望="' + code + '")')
 
+
+        // 如果写入后读取的内容不匹配，发出警告
         if (afterWrite !== code) {
             console.warn('[任意门] ⚠️ 写后读回不匹配，继续写标志...')
+            uni.showToast({ icon: 'none', title: '⚠️ 写后读回不匹配，继续写标志... ' })
         }
 
+        // 设置标志位1和2的十六进制地址
         const addr1Hex = '0x' + adFlag1Addr.toString(16)
         const addr2Hex = '0x' + adFlag2Addr.toString(16)
+        // 写入标志值
         h5gg.setValue(addr2Hex, AD_FLAG2_VALUE, 'I32')
         h5gg.setValue(addr1Hex, AD_FLAG1_VALUE, 'I32')
 
+        // 读取并显示标志值
         const f1 = Number(h5gg.getValue(addr1Hex, 'I32'))
         const f2 = Number(h5gg.getValue(addr2Hex, 'I32'))
         console.log('[任意门] 标志回读: flag1=' + f1 + ', flag2=' + f2)
 
+        // 返回操作成功的结果
         return {
             success: true,
             writtenCode: afterWrite,
@@ -600,16 +640,29 @@ export async function goMapAnyDoor(code) {
             flag2: f2
         }
     } catch (e) {
+        // 捕获并处理异常
         console.error('[任意门] goMapAnyDoor 异常:', e)
         return { success: false, reason: 'exception', message: e.message }
     }
 }
 
+/**
+ * 写入任意门代码的函数
+ * @param {string} code - 要写入的任意门代码
+ * @returns {boolean} - 写入操作是否成功
+ */
 export function writeAnyDoorCode(code) {
+    // 检查广告模块是否初始化且地址是否有效
     if (!adInited || !adStrAddr) return false
+    // 调用写入字符串函数将代码写入指定地址
     return adWriteString(adStrAddr, code)
 }
 
+/**
+ * 触发任意门广告功能函数
+ * 该函数用于设置特定的内存地址值，以触发游戏中的任意门广告功能
+ * @returns {boolean} 返回操作是否成功，成功返回true，失败返回false
+ */
 export function triggerAnyDoor() {
     if (!adInited || !adFlag1Addr || !adFlag2Addr) return false
     try {
@@ -644,7 +697,6 @@ export function clearAnyDoorCache() {
     adCurrentMapId = null
 }
 
-// ================= 供 index.js 统一清理 =================
 export function clearWarpCaches() {
     warpCsdz = null
     mapCoreAddr = null

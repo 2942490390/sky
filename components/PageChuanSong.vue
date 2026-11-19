@@ -77,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, nextTick } from 'vue'
 import {
 	initAnyDoor,
 	goMapAnyDoor,
@@ -88,7 +88,6 @@ import { subMapData } from '@/common/map/warpSpots.js'
 
 // ==================== 地图配置 ====================
 // 中心：遇境；环绕：其余 7 张
-
 const RING_NODES_META = [
 	{ key: 'chendao', name: '晨岛', icon: 'fa-solid fa-mountain-sun', angle: 0 },
 	{ key: 'yunye', name: '云野', icon: 'fa-solid fa-cloud', angle: 51.4 },
@@ -166,7 +165,7 @@ const filteredSpots = computed(() => {
 })
 
 // ==================== 一级 / 二级切换 ====================
-function openSub(mapKey) {
+async function openSub(mapKey) {
 	if (!subMapData[mapKey]) {
 		uni.showToast({ icon: 'none', title: '该地图暂无传送点' })
 		return
@@ -174,7 +173,10 @@ function openSub(mapKey) {
 	activeMap.value = mapKey
 	subSearch.value = ''
 	warpStatus.text = ''
-	ensureAnyDoor()
+	await nextTick()
+	setTimeout(() => {
+		ensureAnyDoor()
+	}, 50)
 }
 
 function closeSub() {
@@ -183,7 +185,7 @@ function closeSub() {
 	warpStatus.text = ''
 }
 
-// ==================== 任意门逻辑（原样保留） ====================
+// ==================== 任意门逻辑 ====================
 async function ensureAnyDoor() {
 	if (anyDoorReady.value) return true
 	try {
@@ -290,7 +292,7 @@ function clearAnyDoor() {
 	overflow: hidden;
 }
 
-/* ===== 面板标题（对应 HTML 的 .panel-title） ===== */
+/* ===== 面板标题 ===== */
 .panel-title {
 	font-size: 13px;
 	font-weight: 700;
@@ -727,7 +729,6 @@ function clearAnyDoor() {
 	margin-left: auto;
 	height: 24px;
 	padding: 0 10px;
-	/* border: 1px solid #b8c9e0; */
 	border-radius: 48px;
 	background: #eaf1fb;
 	color: #4a6fa5;
@@ -767,7 +768,7 @@ function clearAnyDoor() {
 	display: block;
 }
 
-/* ===== 状态条（原有逻辑，样式保留） ===== */
+/* ===== 状态条 ===== */
 .warp-status {
 	margin: 0 0 8px;
 	padding: 8px 12px;

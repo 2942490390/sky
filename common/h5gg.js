@@ -97,7 +97,14 @@ export function writeSafe(addrNum, val, type) {
 // ============================================================
 let Offsets = null
 let offsetsPromise = null
-
+/**
+ * 确保偏移量(Offsets)被正确加载和初始化的函数
+ * 如果Offsets已经存在，则直接返回包含Offsets的Promise
+ * 如果Offsets不存在，则创建一个新的Promise来获取并设置Offsets
+ * 
+ * @returns {Promise<Object>} 返回一个Promise，解析为偏移量对象(Offsets)
+ * 
+ */
 function ensureOffsets() {
 	if (Offsets) return Promise.resolve(Offsets)
 	if (!offsetsPromise) {
@@ -114,9 +121,14 @@ function ensureOffsets() {
 	return offsetsPromise
 }
 
+/**
+ * 根据偏移量获取模块地址
+ * @param {number} off - 偏移量
+ * @returns {number} 返回计算后的模块地址，如果获取不到主模块则返回0
+ */
 export function getModuleAddr(off) {
-	const main = getMain()
-	return main ? Number(main.mainBase) + off : 0
+	const main = getMain() // 获取主模块信息
+	return main ? Number(main.mainBase) + off : 0 // 如果主模块存在，返回主模块基地址加偏移量；否则返回0
 }
 
 /**
@@ -160,9 +172,25 @@ function getPtrSync(key) {
 	setAddr(key, finalAddr, { type })
 	return finalAddr
 }
+/**
+ * 异步获取指针的函数
+ * @param {string} key - 用于获取指针的键值
+ * @returns {Promise} 返回一个Promise，解析后为对应的指针值
+ */
 export async function getPtr(key) {
+	// 确保偏移量已初始化
 	await ensureOffsets()
+	// 调用同步方法获取指针值
 	return getPtrSync(key)
+}
+
+
+// ============================================================
+// 对外暴露等待配置加载完成的 Promise
+// ============================================================
+export async function waitForOffsetsReady() {
+	await ensureOffsets()
+	return true
 }
 
 export function clearOffsets() {
@@ -177,32 +205,32 @@ export function clearOffsets() {
  * @returns {Array} 包含所有方法名的数组
  */
 export function getAllMethodsFromPrototype(obj) {
-    let methods = []  // 存储找到的所有方法
-    let currentObj = obj  // 从当前对象开始遍历
+	let methods = []  // 存储找到的所有方法
+	let currentObj = obj  // 从当前对象开始遍历
 
-    // 遍历原型链，直到 null
-    while (currentObj) {
-        // 获取当前层级的所有自有属性名
-        const props = Object.getOwnPropertyNames(currentObj)
+	// 遍历原型链，直到 null
+	while (currentObj) {
+		// 获取当前层级的所有自有属性名
+		const props = Object.getOwnPropertyNames(currentObj)
 
-        props.forEach(prop => {
-            // 过滤出函数，并避免重复添加
-            if (typeof currentObj[prop] === 'function' && !methods.includes(prop)) {
-                methods.push(prop)  // 将找到的方法添加到数组中
-            }
-        })
+		props.forEach(prop => {
+			// 过滤出函数，并避免重复添加
+			if (typeof currentObj[prop] === 'function' && !methods.includes(prop)) {
+				methods.push(prop)  // 将找到的方法添加到数组中
+			}
+		})
 
-        // 移动到上一层原型
-        currentObj = Object.getPrototypeOf(currentObj)
+		// 移动到上一层原型
+		currentObj = Object.getPrototypeOf(currentObj)
 
-        // 防止死循环（虽然 Object.prototype 的原型是 null，但做个保险）
-        if (currentObj === Object.prototype) {
-            // 可选：是否要包含 Object.prototype 的方法如 toString? 
-            // 通常不需要，可以 break
-            break
-        }
-    }
-    return methods  // 返回找到的所有方法数组
+		// 防止死循环（虽然 Object.prototype 的原型是 null，但做个保险）
+		if (currentObj === Object.prototype) {
+			// 可选：是否要包含 Object.prototype 的方法如 toString? 
+			// 通常不需要，可以 break
+			break
+		}
+	}
+	return methods  // 返回找到的所有方法数组
 }
 
 // ============================================================

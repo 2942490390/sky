@@ -164,7 +164,7 @@ export async function bloomLoop(enabled) {
         bloomAddr = addr
         bloomState.index = 0
         setAddr('bloomAddr', bloomAddr, { type: 'BASE' })
-        uni.showToast({ icon: 'none', title: '0x' + addr.toString(16) })
+        // uni.showToast({ icon: 'none', title: '0x' + addr.toString(16) })
     } else {
         let valid = false
         try {
@@ -239,9 +239,9 @@ export async function xihuoOnce() {
     let ok = false
     try {
         h5gg.clearResults()
-        h5gg.searchNumber('3.5', 'F32', '0x110000000', '0x2000000000')
+        h5gg.searchNumber('3.5', 'F32', '0x110000000', '0x200000000')
         h5gg.searchNearby('-1', 'F32', '0x60')
-        h5gg.searchNumber('3.5', 'F32', '0x00000000', '0x2000000000')
+        h5gg.searchNumber('3.5', 'F32', '0x00000000', '0x200000000')
 
         const count = h5gg.getResultsCount()
         if (!count) {
@@ -265,8 +265,6 @@ export async function xihuoOnce() {
             try {
                 h5gg.clearResults()
                 h5gg.searchNumber('1000000000', 'F32', '0x110000000', '0x2000000000')
-                h5gg.searchNearby('-1', 'F32', '0x60')
-                h5gg.searchNumber('1000000000', 'F32', '0x00000000', '0x2000000000')
                 if (h5gg.getResultsCount()) {
                     h5gg.editAll('3.5', 'F32')
                 }
